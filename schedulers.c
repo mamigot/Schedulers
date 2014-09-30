@@ -16,7 +16,10 @@ static int numProcesses;
 static Process *processes;
 
 
+
 Process *Process_create(int A, int B, int C, int IO){
+	// Parameters (time units):
+	// Arrival, (CPU) Burst, CPU Needed, (I/O) Burst
 	Process *proc = malloc(sizeof(Process));
 
 	proc->A = A;
@@ -25,16 +28,6 @@ Process *Process_create(int A, int B, int C, int IO){
 	proc->IO = IO;
 
 	return proc;
-}
-
-int randomOS(int u){
-	int curr;
-	if(fpRandomNumbers != NULL){
-		fscanf(fpRandomNumbers, "%d", &curr);
-		return 1 + (curr % u);
-	}
-
-	return -1;
 }
 
 void readInput(){
@@ -62,6 +55,16 @@ void printProcesses(){
 		curr = processes[i];
 		printf("(%d %d %d %d)\n", curr.A, curr.B, curr.C, curr.IO);
 	}
+}
+
+int randomOS(int u){
+	int curr;
+	if(fpRandomNumbers != NULL){
+		fscanf(fpRandomNumbers, "%d", &curr);
+		return 1 + (curr % u);
+	}
+
+	return -1;
 }
 
 int main(int argc, char *argv[]){
