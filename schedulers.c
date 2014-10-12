@@ -1,13 +1,24 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 typedef struct {
 	int A, B, C, IO;
+
+	int currBurst;
+
+	int finishingTime;
+	int turnaroundTime;
+	int ioTime;
+	int waitingTime;
 } Process;
 
+typedef struct{
+	Process *items;
+	int size;
+} ProcessList;
 
-void printProcesses();
 
 static FILE *fpRandomNumbers;
 static FILE *fpInput;
@@ -15,9 +26,14 @@ static FILE *fpInput;
 static int numProcesses;
 static Process *processes;
 
+static int clock;
+static ProcessList *unstarted;
+static ProcessList *ready;
+static ProcessList *running;
+static ProcessList *blocked;
 
 
-Process *Process_create(int A, int B, int C, int IO){
+Process *ProcessCreate(int A, int B, int C, int IO){
 	// Parameters (time units):
 	// Arrival, (CPU) Burst, CPU Needed, (I/O) Burst
 	Process *proc = malloc(sizeof(Process));
@@ -31,6 +47,7 @@ Process *Process_create(int A, int B, int C, int IO){
 }
 
 int randomOS(int u){
+
 	int curr;
 	if(fpRandomNumbers != NULL){
 		fscanf(fpRandomNumbers, "%d", &curr);
@@ -51,10 +68,10 @@ void readInput(){
 	Process curr;
 	for(int i = 0; i < numProcesses; i++){
 		fscanf(fpInput, " ( %d %d %d %d ) ", &A, &B, &C, &IO);
-		curr = *Process_create(A, B, C, IO);
+		curr = *ProcessCreate(A, B, C, IO);
 		processes[i] = curr;
 	}
-	
+
 
 	printf("The original input was: %d ", numProcesses);
 	for(int i = 0; i < numProcesses; i++){
@@ -89,6 +106,40 @@ void sortProcessesByArrivalTime(){
 	printf("\n\n");
 }
 
+void initializeLists(){
+	// Free resources from previous scheduler runs (if any)
+	free(unstarted);
+	free(ready);
+	free(running);
+	free(blocked);
+
+	unstarted = malloc(sizeof(ProcessList));
+	unstarted->items = malloc(sizeof(Process) * numProcesses);
+	// Copy all saved processes onto the unstarted list
+	memcpy(unstarted->items, processes, sizeof(Process) * numProcesses);
+	unstarted->size = numProcesses;
+
+	ready = malloc(sizeof(ProcessList));
+	ready->size = 0;
+
+	running = malloc(sizeof(ProcessList));
+	running->size = 0;
+
+	blocked = malloc(sizeof(ProcessList));
+	blocked->size = 0;
+
+
+	clock = 0;
+}
+
+void startUniprogramming(){
+	initializeLists();
+
+	
+}
+
+
+
 void printProcesses(){
 
 	Process curr;
@@ -99,7 +150,6 @@ void printProcesses(){
 }
 
 void printOutput(){
-
 	printf("The original input was: %d ", numProcesses);
 
 	Process curr;
@@ -109,8 +159,6 @@ void printOutput(){
 	}
 
 	printf("\n");
-
-
 }
 
 int main(int argc, char *argv[]){
@@ -119,12 +167,14 @@ int main(int argc, char *argv[]){
 	fpInput = fopen("inputs/input-5.txt", "r");
 
 	readInput();
-
 	sortProcessesByArrivalTime();
+
+	startUniprogramming();
+
+
 
 	fclose(fpRandomNumbers);
 	fclose(fpInput);
-
 	free(processes);
 
 }
