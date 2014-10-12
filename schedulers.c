@@ -138,11 +138,35 @@ void sortProcessesByArrivalTime(){
 	printf("\n\n");
 }
 
-void moveProcess(Process proc, ProcessList newList){
-
+void moveProcess(Process proc, ProcessList oldList, ProcessList newList){
 	// Resolve next and prev links in the old and new lists
 	// Insert it in the new list at the end
 	// Update the process' status
+
+	if( oldList.size == 1){
+		oldList.first = NULL;
+
+	}else if( oldList.size > 1 ){
+		oldList.first = (Process *) proc.next;
+		oldList.first->prev = NULL;
+	}
+	oldList.size--;
+
+
+	if( !newList.size ){
+		newList.first = &proc;
+		newList.last = &proc;
+
+		proc.next = NULL;
+		proc.prev = NULL;
+
+	}else if( newList.size > 1){
+		newList.last->next = (struct Process *) &proc;
+		proc.prev = (struct Process *) newList.last;
+		newList.last = &proc;
+
+	}
+	newList.size++;
 
 }
 
@@ -165,7 +189,7 @@ void initializeLists(){
 		processes[i].status = IS_UNSTARTED;
 		processes[i].remBurst = 0;
 	}
-	
+
 
 	ready.kind = IS_READY;
 	ready.size = 0;
