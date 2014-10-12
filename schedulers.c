@@ -20,7 +20,7 @@
 
 #define isFinished() (unstarted.size || ready.size || running.size || blocked.size) == 0
 
-typedef struct {
+typedef struct Process{
 	int A, B, C, IO;
 
 	int status;
@@ -35,6 +35,7 @@ typedef struct {
 	struct Process *next;
 	struct Process *prev;
 } Process;
+
 
 typedef struct{
 	Process *first;
@@ -140,36 +141,41 @@ void sortProcessesByArrivalTime(){
 	printf("\n\n");
 }
 
-void moveProcess(Process proc, ProcessList oldList, ProcessList newList){
+void moveProcess(Process *proc, ProcessList *oldList, ProcessList *newList){
 	// Resolve next and prev links in the old and new lists
 	// Insert it in the new list at the end
 	// Update the process' status
 
-	if( oldList.size == 1){
-		oldList.first = NULL;
+	if(oldList->size == 0)
+		return;
 
-	}else if( oldList.size > 1 ){
-		oldList.first = (Process *) proc.next;
-		oldList.first->prev = NULL;
+	if( oldList->size == 1){
+		oldList->first = NULL;
+
+	}else if( oldList->size > 1 ){
+		oldList->first = proc->next;
+		oldList->first->prev = NULL;
 	}
-	oldList.size--;
+	oldList->size--;
 
 
-	if( !newList.size ){
-		newList.first = &proc;
-		newList.last = &proc;
+	if( !newList->size ){
+		newList->first = proc;
+		newList->last = proc;
 
-		proc.next = NULL;
-		proc.prev = NULL;
+		proc->next = NULL;
+		proc->prev = NULL;
 
-	}else if( newList.size > 1){
-		newList.last->next = (struct Process *) &proc;
-		proc.prev = (struct Process *) newList.last;
-		newList.last = &proc;
+	}else if( newList->size >= 1 ){
+		newList->last->next = proc;
+		proc->prev = newList->last;
+		newList->last = proc;
 
 	}
-	newList.size++;
+	newList->size++;
 
+
+	proc->status = newList->kind;
 }
 
 void initializeLists(){
@@ -183,10 +189,10 @@ void initializeLists(){
 	int i;
 	for(i = 0; i < numProcesses; i++){
 		if( i > 0 )
-			processes[i].prev = (struct Process *) &processes[i - 1];
+			processes[i].prev = &processes[i - 1];
 		
 		if( i < numProcesses - 1 )
-			processes[i].next = (struct Process *) &processes[i + 1];
+			processes[i].next = &processes[i + 1];
 
 		processes[i].status = IS_UNSTARTED;
 		processes[i].remBurst = 0;
@@ -237,9 +243,22 @@ void runSchedule(int schedulingAlgo){
 	printf("This detailed printout gives the state and remaining burst for each process\n\n");
 
 
-	printf("UNSTARTED\n");
+	printf("UNSTARTED: (%d)\n", unstarted.size);
 	printList(unstarted);
-	printf("%d\n", unstarted.size);
+
+	moveProcess(unstarted.first, &unstarted, &ready);
+	moveProcess(unstarted.first, &unstarted, &ready);
+	moveProcess(unstarted.first, &unstarted, &ready);
+
+	moveProcess(ready.first, &ready, &unstarted);
+
+	printf("UNSTARTED: (%d)\n", unstarted.size);
+	printList(unstarted);
+
+	printf("READY: (%d)\n", ready.size);
+	printList(ready);
+
+
 
 	while( !isFinished() ){
 		
@@ -252,8 +271,10 @@ void runSchedule(int schedulingAlgo){
 		sysClock++;
 
 
-		if(sysClock == 4)
+		if(sysClock == 4){
 			unstarted.size = 0;
+			ready.size = 0;
+		}
 	}
 	
 
@@ -293,20 +314,28 @@ void printProcess(Process proc){
 }
 
 void printList(ProcessList list){
-	Process proc = *list.first;
 	int size = list.size;
+
+	Process proc;
+	if(size > 0)
+		proc = *list.first;
 
 	while(size > 0){
 		printProcess(proc);
-		printf("\n");
+		printf(" ");
+
 		size--;
+		if(size > 0)
+			proc = *(proc.next);
 	}
+
+	printf("\n\n");
 }
 
 int main(int argc, char *argv[]){
 
 	fpRandomNumbers = fopen("random-numbers.txt", "r");
-	fpInput = fopen("inputs/input-2.txt", "r");
+	fpInput = fopen("inputs/input-5.txt", "r");
 
 
 	runSchedule(USE_UNIPROGRAMMING);
