@@ -19,7 +19,7 @@
 #define USE_SJF 12
 #define USE_RR 13
 
-#define isFinished() ((unstarted.size || ready.size || running.size || blocked.size) == 0) && (terminated.size == numProcesses)
+#define isFinished() ((unstarted.size || ready.size || running.size || blocked.size) == 0) //&& (terminated.size == numProcesses)
 
 typedef struct Process{
 	int A, B, C, IO;
@@ -215,27 +215,99 @@ void initializeLists(){
 	terminated.size = 0;
 }
 
-void doBlocked(){
-	if(blocked.size){
+void doRunning(){
+	if(running.size){
+		int sizeCtr = running.size;
+		Process curr = *running.first;
 
+		while(sizeCtr > 0){
+
+			if( !curr.remBurst && curr.C > 0 ){
+				// Generate the burst depending on its CPU-time left
+				curr.remBurst = curr.C >= curr.B ? randomOS(curr.B) : randomOS(curr.C);
+			}
+
+			// Process burst (+update stats)
+			curr.C--;
+			curr.remBurst--;
+			if( !curr.remBurst ){
+				if( curr.C )
+					moveProcess(&curr, &running, &blocked);
+				else
+					moveProcess(&curr, &running, &terminated);
+			}
+
+
+			sizeCtr--;
+			if(sizeCtr > 0)
+				curr = *(curr.next);
+		}
 	}
 }
 
-void doRunning(){
-	if(running.size){
+void doBlocked(){
+	if(blocked.size){
+		int sizeCtr = blocked.size;
+		Process curr = *blocked.first;
 
+		while(sizeCtr > 0){
+
+			if(curr.remBurst == 0){
+				// Generate the burst
+				curr.remBurst = randomOS(curr.IO);
+
+
+			}else{
+				// Process burst (+update stats)
+
+				curr.remBurst--;
+				if(curr.remBurst == 0){
+					// Move it to the ready list
+					moveProcess(&curr, &blocked, &ready);
+				}
+			}
+
+
+			sizeCtr--;
+			if(sizeCtr > 0)
+				curr = *(curr.next);
+		}
 	}
 }
 
 void doUnstarted(){
 	if(unstarted.size){
+		int sizeCtr = unstarted.size;
+		Process curr = *unstarted.first;
 
+		while(sizeCtr > 0){
+			// If it's time for its debut, move it to the ready list
+			if(sysClock == curr.A + 1)
+				moveProcess(&curr, &unstarted, &ready);
+			
+
+			sizeCtr--;
+			if(sizeCtr > 0)
+				curr = *(curr.next);
+		}
 	}
 }
 
 void doReady(){
 	if(ready.size){
+		int sizeCtr = ready.size;
+		Process curr = *ready.first;
 
+		while(sizeCtr > 0){
+			// Move to the running list if it's empty
+			if(!running.size)
+				moveProcess(&curr, &ready, &running);
+			
+
+			sizeCtr--;
+			if(sizeCtr > 0)
+				curr = *(curr.next);
+		}
 	}
 }
 
@@ -248,7 +320,7 @@ void runSchedule(int schedulingAlgo){
 
 	printf("This detailed printout gives the state and remaining burst for each process\n\n");
 
-
+	/*
 	printf("UNSTARTED: (%d)\n", unstarted.size);
 	printList(unstarted);
 
@@ -263,27 +335,20 @@ void runSchedule(int schedulingAlgo){
 
 	printf("READY: (%d)\n", ready.size);
 	printList(ready);
-
+	*/
 
 
 	while( !isFinished() ){
-		
-		doBlocked();
+ 
+ 		doBlocked();
 		doRunning();
 		doUnstarted();
 		doReady();
 
 		printCycle();
 		sysClock++;
-
-
-		if(sysClock == 4){
-			unstarted.size = 0;
-			ready.size = 0;
-		}
 	}
 	
-
 	free(processes);
 }
 
@@ -320,18 +385,18 @@ void printProcess(Process proc){
 }
 
 void printList(ProcessList list){
-	int size = list.size;
+	int sizeCtr = list.size;
 
 	Process proc;
-	if(size > 0)
+	if(sizeCtr > 0)
 		proc = *list.first;
 
-	while(size > 0){
+	while(sizeCtr > 0){
 		printProcess(proc);
 		printf(" ");
 
-		size--;
-		if(size > 0)
+		sizeCtr--;
+		if(sizeCtr > 0)
 			proc = *(proc.next);
 	}
 
