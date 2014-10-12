@@ -59,6 +59,8 @@ static ProcessList blocked;
 
 
 void printCycle();
+void printList();
+void printProcess();
 
 
 Process *ProcessCreate(int A, int B, int C, int IO){
@@ -235,6 +237,10 @@ void runSchedule(int schedulingAlgo){
 	printf("This detailed printout gives the state and remaining burst for each process\n\n");
 
 
+	printf("UNSTARTED\n");
+	printList(unstarted);
+	printf("%d\n", unstarted.size);
+
 	while( !isFinished() ){
 		
 		doBlocked();
@@ -246,7 +252,7 @@ void runSchedule(int schedulingAlgo){
 		sysClock++;
 
 
-		if(sysClock == 10)
+		if(sysClock == 4)
 			unstarted.size = 0;
 	}
 	
@@ -279,6 +285,22 @@ void printCycle(){
 	}
 
 	printf(".\n");
+}
+
+void printProcess(Process proc){
+
+	printf("(%d %d %d %d)", proc.A, proc.B, proc.C, proc.IO);
+}
+
+void printList(ProcessList list){
+	Process proc = *list.first;
+	int size = list.size;
+
+	while(size > 0){
+		printProcess(proc);
+		printf("\n");
+		size--;
+	}
 }
 
 int main(int argc, char *argv[]){
