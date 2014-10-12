@@ -38,6 +38,7 @@ typedef struct {
 
 typedef struct{
 	Process *first;
+	Process *last;
 
 	int kind;
 	int size;
@@ -137,29 +138,33 @@ void sortProcessesByArrivalTime(){
 	printf("\n\n");
 }
 
-void freeLists(){
+void moveProcess(Process proc, ProcessList newList){
 
-	free(unstarted.first);
-	free(ready.first);
-	free(running.first);
-	free(blocked.first);
+	// Resolve next and prev links in the old and new lists
+	// Insert it in the new list at the end
+	// Update the process' status
+
 }
 
 void initializeLists(){
-	freeLists();
+	// DONT DUPLICATE THE MEMORY (these lists should just have pointers to the elements)
 
-
-	unstarted.first = malloc(sizeof(processes[i]) * numProcesses);
+	unstarted.first = processes;
+	unstarted.last = &processes[numProcesses - 1];
+	unstarted.kind = IS_UNSTARTED;
+	unstarted.size = numProcesses;
 
 	int i;
 	for(i = 0; i < numProcesses; i++){
+		if( i > 0 )
+			processes[i].prev = (struct Process *) &processes[i - 1];
+		
+		if( i < numProcesses - 1 )
+			processes[i].next = (struct Process *) &processes[i + 1];
+
 		processes[i].status = IS_UNSTARTED;
 		processes[i].remBurst = 0;
 	}
-
-	memcpy(unstarted.first, processes, sizeof(processes[i]) * numProcesses);
-	unstarted.kind = IS_UNSTARTED;
-	unstarted.size = numProcesses;
 	
 
 	ready.kind = IS_READY;
@@ -170,13 +175,6 @@ void initializeLists(){
 
 	blocked.kind = IS_BLOCKED;
 	blocked.size = 0;
-}
-
-void moveProcess(Process proc, ProcessList newList){
-
-	// Resolve next and prev links in the old and new lists
-	// Insert it in the new list at the end
-	// Update the process' status
 }
 
 void doBlocked(){
@@ -204,6 +202,8 @@ void doReady(){
 }
 
 void runSchedule(int schedulingAlgo){
+	readInput();
+	sortProcessesByArrivalTime();
 
 	initializeLists();
 	sysClock = 0;
@@ -226,6 +226,8 @@ void runSchedule(int schedulingAlgo){
 			unstarted.size = 0;
 	}
 	
+
+	free(processes);
 }
 
 void printCycle(){
@@ -260,17 +262,11 @@ int main(int argc, char *argv[]){
 	fpRandomNumbers = fopen("random-numbers.txt", "r");
 	fpInput = fopen("inputs/input-2.txt", "r");
 
-	readInput();
-	sortProcessesByArrivalTime();
-
 
 	runSchedule(USE_UNIPROGRAMMING);
 
 
 	fclose(fpRandomNumbers);
 	fclose(fpInput);
-
-	free(processes);
-	freeLists();
 
 }
