@@ -18,7 +18,7 @@
 #define USE_SJF 12
 #define USE_RR 13
 
-#define isFinished() (unstarted->size || ready->size || running->size || blocked->size) == 0
+#define isFinished() (unstarted.size || ready.size || running.size || blocked.size) == 0
 
 typedef struct {
 	int A, B, C, IO;
@@ -30,10 +30,14 @@ typedef struct {
 	int turnaroundTime;
 	int ioTime;
 	int waitingTime;
+
+	struct Process *next;
 } Process;
 
 typedef struct{
-	Process *items;
+	Process *first;
+
+	int kind;
 	int size;
 } ProcessList;
 
@@ -45,10 +49,10 @@ static int numProcesses;
 static Process *processes;
 
 static int sysClock;
-static ProcessList *unstarted;
-static ProcessList *ready;
-static ProcessList *running;
-static ProcessList *blocked;
+static ProcessList unstarted;
+static ProcessList ready;
+static ProcessList running;
+static ProcessList blocked;
 
 
 void printCycle();
@@ -133,70 +137,73 @@ void sortProcessesByArrivalTime(){
 
 void freeLists(){
 
-	free(unstarted);
-	free(ready);
-	free(running);
-	free(blocked);
+	free(unstarted.first);
+	free(ready.first);
+	free(running.first);
+	free(blocked.first);
 }
 
 void initializeLists(){
 	freeLists();
 
-	unstarted = malloc(sizeof(ProcessList));
-	unstarted->items = processes;
-	unstarted->size = numProcesses;
 	int i;
 	for(i = 0; i < numProcesses; i++){
-		unstarted->items[i].status = IS_UNSTARTED;
-		unstarted->items[i].remBurst = 0;
+		processes[i].status = IS_UNSTARTED;
+		processes[i].remBurst = 0;
 	}
 
+	unstarted.first = malloc(sizeof(processes[i]) * numProcesses);
+	memcpy(unstarted.first, processes, sizeof(processes[i]) * numProcesses);
+	unstarted.kind = IS_UNSTARTED;
+	unstarted.size = numProcesses;
+	
+	ready.kind = IS_READY;
+	ready.size = 0;
 
-	ready = malloc(sizeof(ProcessList));
-	ready->size = 0;
+	running.kind = IS_RUNNING;
+	running.size = 0;
 
-	running = malloc(sizeof(ProcessList));
-	running->size = 0;
+	blocked.kind = IS_BLOCKED;
+	blocked.size = 0;
+}
 
-	blocked = malloc(sizeof(ProcessList));
-	blocked->size = 0;
+void moveProcess(ProcessList *from, ProcessList *to, Process proc){
 
 
-	sysClock = 0;
+
 }
 
 void doBlocked(){
-	if(blocked->size){
+	if(blocked.size){
 
 	}
 }
 
 void doRunning(){
-	if(running->size){
+	if(running.size){
 
 	}
 }
 
 void doUnstarted(){
-	if(unstarted->size){
+	if(unstarted.size){
 
 	}
 }
 
 void doReady(){
-	if(ready->size){
+	if(ready.size){
 
 	}
 }
 
 void runSchedule(int schedulingAlgo){
 
-	readInput();
-	sortProcessesByArrivalTime();
-
 	initializeLists();
+	sysClock = 0;
 
 	printf("This detailed printout gives the state and remaining burst for each process\n\n");
+
 
 	while( !isFinished() ){
 		
@@ -210,7 +217,7 @@ void runSchedule(int schedulingAlgo){
 
 
 		if(sysClock == 10)
-			unstarted->size = 0;
+			unstarted.size = 0;
 	}
 	
 }
@@ -246,6 +253,9 @@ int main(int argc, char *argv[]){
 
 	fpRandomNumbers = fopen("random-numbers.txt", "r");
 	fpInput = fopen("inputs/input-2.txt", "r");
+
+	readInput();
+	sortProcessesByArrivalTime();
 
 
 	runSchedule(USE_UNIPROGRAMMING);
