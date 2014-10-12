@@ -12,13 +12,14 @@
 #define IS_RUNNING 2
 #define IS_UNSTARTED 3
 #define IS_READY 4
+#define IS_TERMINATED 5
 
 #define USE_UNIPROGRAMMING 10
 #define USE_FCFS 11
 #define USE_SJF 12
 #define USE_RR 13
 
-#define isFinished() (unstarted.size || ready.size || running.size || blocked.size) == 0
+#define isFinished() ((unstarted.size || ready.size || running.size || blocked.size) == 0) && (terminated.size == numProcesses)
 
 typedef struct Process{
 	int A, B, C, IO;
@@ -57,6 +58,7 @@ static ProcessList unstarted;
 static ProcessList ready;
 static ProcessList running;
 static ProcessList blocked;
+static ProcessList terminated;
 
 
 void printCycle();
@@ -151,6 +153,7 @@ void moveProcess(Process *proc, ProcessList *oldList, ProcessList *newList){
 
 	if( oldList->size == 1){
 		oldList->first = NULL;
+		oldList->last = NULL;
 
 	}else if( oldList->size > 1 ){
 		oldList->first = proc->next;
@@ -207,6 +210,9 @@ void initializeLists(){
 
 	blocked.kind = IS_BLOCKED;
 	blocked.size = 0;
+
+	terminated.kind = IS_TERMINATED;
+	terminated.size = 0;
 }
 
 void doBlocked(){
