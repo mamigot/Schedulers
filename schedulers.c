@@ -31,7 +31,9 @@ typedef struct {
 	int ioTime;
 	int waitingTime;
 
+	// Useful in a linked-list setting
 	struct Process *next;
+	struct Process *prev;
 } Process;
 
 typedef struct{
@@ -146,17 +148,20 @@ void freeLists(){
 void initializeLists(){
 	freeLists();
 
+
+	unstarted.first = malloc(sizeof(processes[i]) * numProcesses);
+
 	int i;
 	for(i = 0; i < numProcesses; i++){
 		processes[i].status = IS_UNSTARTED;
 		processes[i].remBurst = 0;
 	}
 
-	unstarted.first = malloc(sizeof(processes[i]) * numProcesses);
 	memcpy(unstarted.first, processes, sizeof(processes[i]) * numProcesses);
 	unstarted.kind = IS_UNSTARTED;
 	unstarted.size = numProcesses;
 	
+
 	ready.kind = IS_READY;
 	ready.size = 0;
 
@@ -167,10 +172,11 @@ void initializeLists(){
 	blocked.size = 0;
 }
 
-void moveProcess(ProcessList *from, ProcessList *to, Process proc){
+void moveProcess(Process proc, ProcessList newList){
 
-
-
+	// Resolve next and prev links in the old and new lists
+	// Insert it in the new list at the end
+	// Update the process' status
 }
 
 void doBlocked(){
