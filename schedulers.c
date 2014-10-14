@@ -19,7 +19,7 @@
 #define USE_SJF 12
 #define USE_RR 13
 
-#define isFinished() ((unstarted.size || ready.size || running.size || blocked.size) == 0) //&& (terminated.size == numProcesses)
+#define isFinished() ((unstarted.size || ready.size || running.size || blocked.size) == 0) // (terminated.size == numProcesses)
 
 typedef struct Process{
 	int A, B, C, IO;
@@ -143,10 +143,72 @@ void sortProcessesByArrivalTime(){
 	printf("\n\n");
 }
 
-void moveProcess(Process *proc, ProcessList *oldList, ProcessList *newList){
-	// Resolve next and prev links in the old and new lists
-	// Insert it in the new list at the end
-	// Update the process' status
+Process *removeFromList(ProcessList *list, int index){
+	// Removes the element corresponding to the index from the list (takes O(n))
+
+	int size = list->size;
+	if(index >= size || index < 0)
+		return NULL;
+
+	Process *proc = list->first;
+	int counter = 0;
+
+	while(counter < index && proc->next != NULL){
+		proc = proc->next;
+		counter++;
+	}
+		
+	// proc is the process we want to delete
+	if(size == 1){
+		list->first = NULL;
+		list->last = NULL;
+
+	}else if(counter == 0 && proc->next != NULL){
+		// First element
+		proc->next->prev = NULL;
+		list->first = proc->next;
+
+	}else if(counter == size - 1 && proc->prev != NULL){
+		// Last element
+		proc->prev->next = NULL;
+		list->last = proc->prev;
+
+	}else{
+		// Any element in the middle
+		proc->prev->next = proc->next;
+		proc->next->prev = proc->prev;
+
+	}
+
+	proc->next = NULL;
+	proc->prev = NULL;
+	list->size--;
+
+	return proc;
+}
+
+void insertAtEnd(ProcessList *list, Process *proc){
+	// DEBUG
+	if(proc->next != NULL || proc->prev != NULL)
+		printf("\n\n(!) inserting an element whose front or back pointer isn't null!\n\n");
+
+
+	// Inserts the process at the end of the given list
+
+	int size = list->size;
+
+	if(size == 0){
+		list->first = proc;
+		list->last = proc;
+
+	}else{
+		list->last->next = proc;
+		proc->prev = list->last;
+		list->last = proc;
+	}
+
+	proc->next = NULL;
+	list->size++;
 }
 
 void initializeLists(){
@@ -233,6 +295,24 @@ void runSchedule(int schedulingAlgo){
 
 	printf("This detailed printout gives the state and remaining burst for each process\n\n");
 
+	Process *proc1 = removeFromList(&unstarted, 0);
+	printList("unstarted", unstarted);
+
+	Process *proc2 = removeFromList(&unstarted, 0);
+	printList("unstarted", unstarted);
+
+	Process *proc3 = removeFromList(&unstarted, 0);
+	printList("unstarted", unstarted);
+
+	insertAtEnd(&ready, proc1);
+	insertAtEnd(&ready, proc2);
+	insertAtEnd(&ready, proc3);
+	printList("ready", ready);
+
+	insertAtEnd(&blocked, proc3);
+	printList("blocked", blocked);
+
+
 	while( !isFinished() ){
 
  		doBlocked();
@@ -242,8 +322,10 @@ void runSchedule(int schedulingAlgo){
 
 		sysClock++;
 
-		printCycle();
+		if(sysClock == 5)
+			break;
 
+		printCycle();
 	}
 	
 	free(processes);
@@ -281,9 +363,9 @@ void printProcess(Process proc){
 	printf("(%d %d %d %d)", proc.A, proc.B, proc.C, proc.IO);
 }
 
-void printList(ProcessList list){
+void printList(char* name, ProcessList list){
 	int sizeCtr = list.size;
-	printf("size: (%d)\n", sizeCtr);
+	printf("%s, size: (%d)\n", name, sizeCtr);
 
 	Process proc;
 	if(sizeCtr > 0)
