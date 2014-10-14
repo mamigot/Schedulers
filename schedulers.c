@@ -274,8 +274,18 @@ void doUnstarted(){
 }
 
 void doReady(){
-	if(ready.size){
-		
+	// Only mark as "running" if nobody else is running
+	if(ready.size && !running.size){
+		// Ready is FIFO (index 0)
+		Process *chosen = removeFromList(&ready, 0);
+
+		// Get the burst
+		int burst = chosen->C > chosen->B ? randomOS(chosen->B) : randomOS(chosen->C);
+
+		insertAtEnd(&running, chosen);
+		chosen->remBurst = burst;
+		chosen->status = IS_RUNNING;
+
 	}
 }
 
