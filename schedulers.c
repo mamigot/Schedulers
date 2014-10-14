@@ -20,6 +20,9 @@
 #define USE_RR 13
 
 #define isFinished() ((unstarted.size || ready.size || running.size || blocked.size) == 0) // (terminated.size == numProcesses)
+#define getBurstCPU(proc) proc->C > proc->B ? randomOS(proc->B) : randomOS(proc->C)
+#define getBurstIO(proc) randomOS(proc->IO)
+
 
 typedef struct Process{
 	int A, B, C, IO;
@@ -280,12 +283,9 @@ void doReady(){
 		Process *chosen = removeFromList(&ready, 0);
 
 		// Get the burst
-		int burst = chosen->C > chosen->B ? randomOS(chosen->B) : randomOS(chosen->C);
-
-		insertAtEnd(&running, chosen);
-		chosen->remBurst = burst;
+		chosen->remBurst = getBurstCPU(chosen);
 		chosen->status = IS_RUNNING;
-
+		insertAtEnd(&running, chosen);
 	}
 }
 
