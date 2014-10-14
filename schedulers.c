@@ -248,22 +248,27 @@ void initializeLists(){
 
 void doUnstarted(){
 	if(unstarted.size){
-		int sizeCtr = unstarted.size;
-		Process *curr = unstarted.first;
+		// Go through the unstarted elements and possibly move them to the ready list
+		// (they debut when sysClock == curr->A + 1)
+		Process *proc = unstarted.first;
+		Process *transient;
+		int counter = 0;
 
-		while(sizeCtr > 0){
-			// If it's time for its debut, move it to the ready list
-			if( sysClock >= curr->A + 1 ){
-				curr->status = IS_READY;
-				unstarted.size--;
+		while(counter < unstarted.size){
+			if(sysClock >= proc->A + 1){
+				transient = removeFromList(&unstarted, counter);
+				insertAtEnd(&ready, transient);
+				transient->status = IS_READY;
+
+				// Reset the count after the unstarted list is modified
+				proc = unstarted.first;
+				counter = 0;
+
+			}else{
+				if(proc->next != NULL)
+					proc = proc->next;
+				counter++;
 			}
-
-			// FIX THE POINTERS
-			
-
-			sizeCtr--;
-			if(sizeCtr > 0)
-				curr = curr->next;
 		}
 	}
 }
@@ -295,24 +300,6 @@ void runSchedule(int schedulingAlgo){
 
 	printf("This detailed printout gives the state and remaining burst for each process\n\n");
 
-	Process *proc1 = removeFromList(&unstarted, 0);
-	printList("unstarted", unstarted);
-
-	Process *proc2 = removeFromList(&unstarted, 0);
-	printList("unstarted", unstarted);
-
-	Process *proc3 = removeFromList(&unstarted, 0);
-	printList("unstarted", unstarted);
-
-	insertAtEnd(&ready, proc1);
-	insertAtEnd(&ready, proc2);
-	insertAtEnd(&ready, proc3);
-	printList("ready", ready);
-
-	insertAtEnd(&blocked, proc3);
-	printList("blocked", blocked);
-
-
 	while( !isFinished() ){
 
  		doBlocked();
@@ -320,12 +307,11 @@ void runSchedule(int schedulingAlgo){
 		doUnstarted();
 		doReady();
 
-		sysClock++;
-
-		if(sysClock == 5)
+		if(sysClock == 10)
 			break;
 
 		printCycle();
+		sysClock++;
 	}
 	
 	free(processes);
@@ -386,7 +372,7 @@ void printList(char* name, ProcessList list){
 int main(int argc, char *argv[]){
 
 	fpRandomNumbers = fopen("random-numbers.txt", "r");
-	fpInput = fopen("inputs/input-5.txt", "r");
+	fpInput = fopen("inputs/input-2.txt", "r");
 
 
 	runSchedule(USE_UNIPROGRAMMING);
