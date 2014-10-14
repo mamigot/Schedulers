@@ -147,38 +147,6 @@ void moveProcess(Process *proc, ProcessList *oldList, ProcessList *newList){
 	// Resolve next and prev links in the old and new lists
 	// Insert it in the new list at the end
 	// Update the process' status
-
-	if(oldList->size == 0)
-		return;
-
-	if( oldList->size == 1){
-		oldList->first = NULL;
-		oldList->last = NULL;
-
-	}else if( oldList->size > 1 ){
-		oldList->first = proc->next;
-		oldList->first->prev = NULL;
-	}
-	oldList->size--;
-
-
-	if( !newList->size ){
-		newList->first = proc;
-		newList->last = proc;
-
-		proc->next = NULL;
-		proc->prev = NULL;
-
-	}else if( newList->size >= 1 ){
-		newList->last->next = proc;
-		proc->prev = newList->last;
-		newList->last = proc;
-
-	}
-	newList->size++;
-
-
-	proc->status = newList->kind;
 }
 
 void initializeLists(){
@@ -186,6 +154,7 @@ void initializeLists(){
 
 	unstarted.first = processes;
 	unstarted.last = &processes[numProcesses - 1];
+	
 	unstarted.kind = IS_UNSTARTED;
 	unstarted.size = numProcesses;
 
@@ -215,99 +184,43 @@ void initializeLists(){
 	terminated.size = 0;
 }
 
-void doRunning(){
-	if(running.size){
-		int sizeCtr = running.size;
-		Process curr = *running.first;
-
-		while(sizeCtr > 0){
-
-			if( !curr.remBurst && curr.C > 0 ){
-				// Generate the burst depending on its CPU-time left
-				curr.remBurst = curr.C >= curr.B ? randomOS(curr.B) : randomOS(curr.C);
-			}
-
-			// Process burst (+update stats)
-			curr.C--;
-			curr.remBurst--;
-			if( !curr.remBurst ){
-				if( curr.C )
-					moveProcess(&curr, &running, &blocked);
-				else
-					moveProcess(&curr, &running, &terminated);
-			}
-
-
-			sizeCtr--;
-			if(sizeCtr > 0)
-				curr = *(curr.next);
-		}
-	}
-}
-
-void doBlocked(){
-	if(blocked.size){
-		int sizeCtr = blocked.size;
-		Process curr = *blocked.first;
-
-		while(sizeCtr > 0){
-
-			if(curr.remBurst == 0){
-				// Generate the burst
-				curr.remBurst = randomOS(curr.IO);
-
-
-			}else{
-				// Process burst (+update stats)
-
-				curr.remBurst--;
-				if(curr.remBurst == 0){
-					// Move it to the ready list
-					moveProcess(&curr, &blocked, &ready);
-				}
-			}
-
-
-			sizeCtr--;
-			if(sizeCtr > 0)
-				curr = *(curr.next);
-		}
-	}
-}
-
 void doUnstarted(){
 	if(unstarted.size){
 		int sizeCtr = unstarted.size;
-		Process curr = *unstarted.first;
+		Process *curr = unstarted.first;
 
 		while(sizeCtr > 0){
 			// If it's time for its debut, move it to the ready list
-			if(sysClock == curr.A + 1)
-				moveProcess(&curr, &unstarted, &ready);
+			if( sysClock >= curr->A + 1 ){
+				curr->status = IS_READY;
+				unstarted.size--;
+			}
+
+			// FIX THE POINTERS
 			
 
 			sizeCtr--;
 			if(sizeCtr > 0)
-				curr = *(curr.next);
+				curr = curr->next;
 		}
 	}
 }
 
 void doReady(){
 	if(ready.size){
-		int sizeCtr = ready.size;
-		Process curr = *ready.first;
+		
+	}
+}
 
-		while(sizeCtr > 0){
-			// Move to the running list if it's empty
-			if(!running.size)
-				moveProcess(&curr, &ready, &running);
-			
+void doRunning(){
+	if(running.size){
+		
+	}
+}
 
-			sizeCtr--;
-			if(sizeCtr > 0)
-				curr = *(curr.next);
-		}
+void doBlocked(){
+	if(blocked.size){
+
 	}
 }
 
@@ -320,33 +233,17 @@ void runSchedule(int schedulingAlgo){
 
 	printf("This detailed printout gives the state and remaining burst for each process\n\n");
 
-	/*
-	printf("UNSTARTED: (%d)\n", unstarted.size);
-	printList(unstarted);
-
-	moveProcess(unstarted.first, &unstarted, &ready);
-	moveProcess(unstarted.first, &unstarted, &ready);
-	moveProcess(unstarted.first, &unstarted, &ready);
-
-	moveProcess(ready.first, &ready, &unstarted);
-
-	printf("UNSTARTED: (%d)\n", unstarted.size);
-	printList(unstarted);
-
-	printf("READY: (%d)\n", ready.size);
-	printList(ready);
-	*/
-
-
 	while( !isFinished() ){
- 
+
  		doBlocked();
 		doRunning();
 		doUnstarted();
 		doReady();
 
-		printCycle();
 		sysClock++;
+
+		printCycle();
+
 	}
 	
 	free(processes);
@@ -386,6 +283,7 @@ void printProcess(Process proc){
 
 void printList(ProcessList list){
 	int sizeCtr = list.size;
+	printf("size: (%d)\n", sizeCtr);
 
 	Process proc;
 	if(sizeCtr > 0)
