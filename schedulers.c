@@ -19,8 +19,8 @@
 #define USE_SJF 12
 #define USE_RR 13
 
-#define isFinished() ((unstarted.size || ready.size || running.size || blocked.size) == 0) // (terminated.size == numProcesses)
-#define getBurstCPU(proc) proc->C > proc->B ? randomOS(proc->B) : randomOS(proc->C)
+#define isFinished() ( (unstarted.size || ready.size || running.size || blocked.size) == 0)
+#define getBurstCPU(proc) randomOS(proc->B)
 #define getBurstIO(proc) randomOS(proc->IO)
 
 
@@ -57,6 +57,8 @@ static int numProcesses;
 static Process *processes;
 
 static int sysClock;
+static int cpuIsFree = 1;
+
 static ProcessList unstarted;
 static ProcessList ready;
 static ProcessList running;
@@ -190,7 +192,30 @@ Process *removeFromList(ProcessList *list, int index){
 	return proc;
 }
 
-void insertAtEnd(ProcessList *list, Process *proc){
+void insertBeginning(ProcessList *list, Process *proc){
+	// DEBUG
+	if(proc->next != NULL || proc->prev != NULL)
+		printf("\n\n(!) inserting an element whose front or back pointer isn't null!\n\n");
+
+	// Inserts the process at the beginning of the list
+
+	int size = list->size;
+
+	if(size == 0){
+		list->first = proc;
+		list->last = proc;
+
+	}else{
+		list->first->prev = proc;
+		proc->next = list->first;
+		list->first = proc;
+	}
+
+	proc->prev = NULL;
+	list->size++;
+}
+
+void insertEnd(ProcessList *list, Process *proc){
 	// DEBUG
 	if(proc->next != NULL || proc->prev != NULL)
 		printf("\n\n(!) inserting an element whose front or back pointer isn't null!\n\n");
@@ -260,7 +285,7 @@ void doUnstarted(){
 		while(counter < unstarted.size){
 			if(sysClock >= proc->A + 1){
 				transient = removeFromList(&unstarted, counter);
-				insertAtEnd(&ready, transient);
+				insertEnd(&ready, transient);
 				transient->status = IS_READY;
 
 				// Reset the count after the unstarted list is modified
@@ -278,27 +303,75 @@ void doUnstarted(){
 
 void doReady(){
 	// Only mark as "running" if nobody else is running
-	if(ready.size && !running.size){
+	if(ready.size && !running.size && cpuIsFree){
 		// Ready is FIFO (index 0)
 		Process *chosen = removeFromList(&ready, 0);
 
 		// Get the burst
 		chosen->remBurst = getBurstCPU(chosen);
 		chosen->status = IS_RUNNING;
-		insertAtEnd(&running, chosen);
+		insertEnd(&running, chosen);
 	}
 }
 
-void doRunning(){
-	if(running.size){
-		
-	}
-}
-
-void doBlocked(){
+void doBlockedUniprogramming(){
 	if(blocked.size){
+		// Process the burst and, once it's done, move the process back to running
+		// Will only be one element here
+		Process *proc = blocked.first;
+		proc->remBurst--;
+
+		if( !proc->remBurst ){
+			removeFromList(&blocked, 0);
+			proc->status = IS_READY;
+			insertBeginning(&ready, proc);
+			cpuIsFree = 1;
+		}
+	}
+}
+
+void doBlocked(schedulingAlgo){
+	if(schedulingAlgo == USE_UNIPROGRAMMING)
+		doBlockedUniprogramming();
+}
+
+void doRunningUniprogramming(){
+	if(running.size){
+		// Only leave the list when the job is done
+		Process *runner = running.first;
+		runner->C--;
+
+		if( runner->C ){
+			// Still have CPU time left
+			runner->remBurst--;
+
+			if( !runner->remBurst ){
+				// Go to IO!
+				// (don't add anything to running in the meantime)
+				cpuIsFree = 0;
+
+				removeFromList(&running, 0);
+				runner->remBurst = getBurstIO(runner);
+				runner->status = IS_BLOCKED;
+				insertBeginning(&blocked, runner);
+			}
+
+		}else{
+			// Done with the CPU job!
+			runner->remBurst = 0;
+			cpuIsFree = 1;
+
+			removeFromList(&running, 0);
+			runner->status = IS_TERMINATED;
+			insertEnd(&terminated, runner);
+		}
 
 	}
+}
+
+void doRunning(schedulingAlgo){
+	if(schedulingAlgo == USE_UNIPROGRAMMING)
+		doRunningUniprogramming();
 }
 
 void runSchedule(int schedulingAlgo){
@@ -306,21 +379,21 @@ void runSchedule(int schedulingAlgo){
 	sortProcessesByArrivalTime();
 
 	initializeLists();
+	cpuIsFree = 1;
 	sysClock = 0;
 
 	printf("This detailed printout gives the state and remaining burst for each process\n\n");
 
 	while( !isFinished() ){
 
- 		doBlocked();
-		doRunning();
+ 		doBlocked(schedulingAlgo);
+		doRunning(schedulingAlgo);
 		doUnstarted();
 		doReady();
 
-		if(sysClock == 10)
-			break;
-
-		printCycle();
+		if( !isFinished() )
+			printCycle();
+		
 		sysClock++;
 	}
 	
@@ -346,6 +419,10 @@ void printCycle(){
 
 		else if(curr.status == IS_READY)
 			printf("%11s", "ready");
+
+		else if(curr.status == IS_TERMINATED)
+			printf("%11s", "terminated");
+
 
 
 		printf("%3d", curr.remBurst);
@@ -382,7 +459,7 @@ void printList(char* name, ProcessList list){
 int main(int argc, char *argv[]){
 
 	fpRandomNumbers = fopen("random-numbers.txt", "r");
-	fpInput = fopen("inputs/input-2.txt", "r");
+	fpInput = fopen("inputs/input-5.txt", "r");
 
 
 	runSchedule(USE_UNIPROGRAMMING);
