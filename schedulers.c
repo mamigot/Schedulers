@@ -129,7 +129,7 @@ void sortProcessesByArrivalTime(){
 	for(i = 0; i < numProcesses; i++){
 		minIndex = i;
 		for(j = i + 1; j < numProcesses; j++)
-			if(processes[j].A <= processes[minIndex].A)
+			if(processes[j].A < processes[minIndex].A)
 				minIndex = j;
 
 		proc = processes[i];
@@ -314,25 +314,36 @@ void doReady(){
 	}
 }
 
-void doBlockedUniprogramming(){
+void doBlocked(schedulingAlgo){
+
 	if(blocked.size){
 		// Process the burst and, once it's done, move the process to ready
-		// Will only be one element here
-		Process *proc = blocked.first;
-		proc->remBurst--;
+		// (this could apply to multiple processes)
+		Process *proc;
 
-		if( !proc->remBurst ){
-			removeFromList(&blocked, 0);
-			proc->status = IS_READY;
-			insertBeginning(&ready, proc);
-			cpuIsFree = 1;
+		int sizeCtr = blocked.size;
+
+		while(sizeCtr > 0){
+			proc = blocked.first;
+			proc->remBurst--;
+
+			if( !proc->remBurst ){
+				removeFromList(&blocked, 0); // ! BUG... HARDCODED 0 (problem with + 1 blocked processes)
+				proc->status = IS_READY;
+
+				if(schedulingAlgo == USE_UNIPROGRAMMING)
+					insertBeginning(&ready, proc);
+				else
+					insertEnd(&ready, proc);
+				
+				cpuIsFree = 1;
+			}
+
+			sizeCtr--;
+			if(sizeCtr > 1)
+				proc = proc->next;
 		}
 	}
-}
-
-void doBlocked(schedulingAlgo){
-	if(schedulingAlgo == USE_UNIPROGRAMMING)
-		doBlockedUniprogramming();
 }
 
 void doRunningUniprogramming(){
@@ -369,9 +380,45 @@ void doRunningUniprogramming(){
 	}
 }
 
+void doRunningFcfs(){
+	if(running.size){
+		// Only leave the list when the job is done
+		Process *runner = running.first;
+		runner->C--;
+
+		if( runner->C ){
+			// Still have CPU time left
+			runner->remBurst--;
+
+			if( !runner->remBurst ){
+				// Go to IO!
+				cpuIsFree = 1;
+
+				removeFromList(&running, 0);
+				runner->remBurst = getBurstIO(runner);
+				runner->status = IS_BLOCKED;
+				insertBeginning(&blocked, runner);
+			}
+
+		}else{
+			// Done with the CPU job!
+			runner->remBurst = 0;
+			cpuIsFree = 1;
+
+			removeFromList(&running, 0);
+			runner->status = IS_TERMINATED;
+			insertEnd(&terminated, runner);
+		}
+
+	}
+}
+
 void doRunning(schedulingAlgo){
 	if(schedulingAlgo == USE_UNIPROGRAMMING)
 		doRunningUniprogramming();
+
+	else if(schedulingAlgo == USE_FCFS)
+		doRunningFcfs();
 }
 
 void runSchedule(int schedulingAlgo){
@@ -459,10 +506,10 @@ void printList(char* name, ProcessList list){
 int main(int argc, char *argv[]){
 
 	fpRandomNumbers = fopen("random-numbers.txt", "r");
-	fpInput = fopen("inputs/input-5.txt", "r");
+	fpInput = fopen("inputs/input-7.txt", "r");
 
 
-	runSchedule(USE_UNIPROGRAMMING);
+	runSchedule(USE_FCFS);
 
 
 	fclose(fpRandomNumbers);
