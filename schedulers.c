@@ -129,7 +129,7 @@ void sortProcessesByArrivalTime(){
 	for(i = 0; i < numProcesses; i++){
 		minIndex = i;
 		for(j = i + 1; j < numProcesses; j++)
-			if(processes[j].A < processes[minIndex].A)
+			if(processes[j].A <= processes[minIndex].A)
 				minIndex = j;
 
 		proc = processes[i];
@@ -316,7 +316,7 @@ void doReady(){
 
 void doBlockedUniprogramming(){
 	if(blocked.size){
-		// Process the burst and, once it's done, move the process back to running
+		// Process the burst and, once it's done, move the process to ready
 		// Will only be one element here
 		Process *proc = blocked.first;
 		proc->remBurst--;
@@ -347,7 +347,7 @@ void doRunningUniprogramming(){
 
 			if( !runner->remBurst ){
 				// Go to IO!
-				// (don't add anything to running in the meantime)
+				// (don't add new things to running in the meantime)
 				cpuIsFree = 0;
 
 				removeFromList(&running, 0);
