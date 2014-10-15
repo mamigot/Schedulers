@@ -286,6 +286,8 @@ void initializeLists(){
 
 		processes[i].status = IS_UNSTARTED;
 		processes[i].remBurst = 0;
+		processes[i].ioTime = 0;
+		processes[i].waitingTime = 0;
 	}
 
 
@@ -300,6 +302,22 @@ void initializeLists(){
 
 	terminated.kind = IS_TERMINATED;
 	terminated.size = 0;
+}
+
+void updateWaitingTimes(){
+	if(ready.size){
+		Process *proc = ready.first;
+		int size = ready.size;
+
+		while(size > 0){
+			proc->waitingTime++;
+
+			size--;
+			if(proc->next != NULL){
+				proc = proc->next;
+			}
+		}
+	}
 }
 
 void doUnstarted(){
@@ -364,6 +382,7 @@ void doBlocked(schedulingAlgo){
 		while(sizeCtr > 0){
 			proc = blocked.first;
 			proc->remBurst--;
+			proc->ioTime++;
 
 			if( !proc->remBurst ){
 				removeFromList(&blocked, 0); // ! BUG... HARDCODED 0 (problem with + 1 blocked processes)
@@ -414,6 +433,7 @@ void doRunning(schedulingAlgo){
 
 			removeFromList(&running, 0);
 			runner->status = IS_TERMINATED;
+			runner->finishingTime = sysClock - 1;
 			insertEnd(&terminated, runner);
 		}
 
@@ -437,6 +457,8 @@ void runSchedule(int schedulingAlgo){
 		doUnstarted();
 		doReady(schedulingAlgo);
 
+		updateWaitingTimes();
+
 		if( !isFinished() )
 			printCycle();
 		
@@ -455,7 +477,15 @@ void printReport(){
 	Process proc;
 	int i;
 	for(i = 0; i < numProcesses; i++){
+		proc = processes[i];
 		printf("Process %d:\n", i);
+
+		printf("\t (A,B,C,IO) = (%d, %d, %d, %d)\n", proc.A, proc.B, proc.C, proc.IO);
+
+		printf("\t Finishing time: %d\n", proc.finishingTime);
+		printf("\t Turnaround time: %d\n", proc.finishingTime - proc.A);
+		printf("\t I/O time: %d\n", proc.ioTime);
+		printf("\t Waiting time: %d\n", proc.waitingTime);
 
 		printf("\n");
 	}
