@@ -130,19 +130,20 @@ void readInput(){
 }
 
 void sortProcessesByArrivalTime(){
-	// Selection sort
+	// Insertion sort
 
 	Process proc;
-	int i, j, minIndex;
+	int i, j;
 	for(i = 0; i < numProcesses; i++){
-		minIndex = i;
-		for(j = i + 1; j < numProcesses; j++)
-			if(processes[j].A < processes[minIndex].A)
-				minIndex = j;
+		j = i;
+		while(j - 1 >= 0 && processes[j - 1].A > processes[j].A){
+			// Swap
+			proc = processes[j];
+			processes[j] = processes[j-1];
+			processes[j-1] = proc;
 
-		proc = processes[i];
-		processes[i] = processes[minIndex];
-		processes[minIndex] = proc;
+			j--;
+		}
 	}
 
 
@@ -353,15 +354,15 @@ void doUnstarted(){
 }
 
 void doReady(schedulingAlgo){
-	// Only mark as "running" if nobody else is running
+	// Only mark as "running" if nobody else is running (single processor)
 	if(ready.size && !running.size && cpuIsFree){
-		// Ready is FIFO (index 0)
 		Process *chosen;
 
 		if(schedulingAlgo == USE_SJF){
 			int sjIndex = getShortestJobIndex(&ready);
 			chosen = removeFromList(&ready, sjIndex);
 		}else{
+			// FIFO (index 0)
 			chosen = removeFromList(&ready, 0);
 		}
 
@@ -577,7 +578,7 @@ void printList(char* name, ProcessList list){
 int main(int argc, char *argv[]){
 
 	fpRandomNumbers = fopen("random-numbers.txt", "r");
-	fpInput = fopen("inputs/input-3.txt", "r");
+	fpInput = fopen("inputs/input-5.txt", "r");
 
 
 	runSchedule(USE_RR);
