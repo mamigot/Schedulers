@@ -260,7 +260,7 @@ int getShortestJobIndex(ProcessList *list){
 	int ctr = 1;
 	while( ctr < size ){
 
-		if(proc->cCtr <= smallestC){
+		if(proc->cCtr < smallestC){
 			sjIndex = ctr;
 			smallestC = proc->cCtr;
 		}
@@ -366,11 +366,7 @@ void doReady(schedulingAlgo){
 			chosen = removeFromList(&ready, 0);
 		}
 
-
-		if(schedulingAlgo == USE_RR)
-			chosen->remBurst = QUANTUM_RR > chosen->B ? randomOS(chosen->B) : randomOS(QUANTUM_RR);
-		else
-			chosen->remBurst = randomOS(chosen->B);
+		chosen->remBurst = randomOS(chosen->B);
 
 		chosen->status = IS_RUNNING;
 		insertEnd(&running, chosen);
@@ -384,16 +380,19 @@ void doBlocked(schedulingAlgo){
 		// Process the burst and, once it's done, move the process to ready
 		// (this could apply to multiple processes)
 		Process *proc;
+		Process *temp;
+		
+		proc = blocked.first;
 
-		int sizeCtr = blocked.size;
-
-		while(sizeCtr > 0){
-			proc = blocked.first;
+		int ctr = 0;
+		while(proc != NULL){
 			proc->remBurst--;
 			proc->ioTime++;
 
 			if( !proc->remBurst ){
-				removeFromList(&blocked, 0); // ! BUG... HARDCODED 0 (problem with + 1 blocked processes)
+				temp = proc->next;
+
+				removeFromList(&blocked, ctr);
 				proc->status = IS_READY;
 
 				if(schedulingAlgo == USE_UNIPROGRAMMING)
@@ -402,12 +401,15 @@ void doBlocked(schedulingAlgo){
 					insertEnd(&ready, proc);
 				
 				cpuIsFree = 1;
+				proc = temp;
+
+			}else{
+				proc = proc->next;
+				ctr++;
 			}
 
-			sizeCtr--;
-			if(sizeCtr > 1)
-				proc = proc->next;
 		}
+		
 	}
 }
 
