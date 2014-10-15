@@ -27,6 +27,7 @@
 
 typedef struct Process{
 	int A, B, C, IO;
+	int cCtr;
 
 	int status;
 	int remBurst;
@@ -67,10 +68,10 @@ static ProcessList blocked;
 static ProcessList terminated;
 
 
+void printReport();
 void printCycle();
-void printList();
 void printProcess();
-
+void printList();
 
 Process *ProcessCreate(int A, int B, int C, int IO){
 	// Parameters (time units):
@@ -80,6 +81,7 @@ Process *ProcessCreate(int A, int B, int C, int IO){
 	proc->A = A;
 	proc->B = B;
 	proc->C = C;
+	proc->cCtr = C;
 	proc->IO = IO;
 
 	return proc;
@@ -240,6 +242,31 @@ void insertEnd(ProcessList *list, Process *proc){
 	list->size++;
 }
 
+int getShortestJobIndex(ProcessList *list){
+	// Determined by the processes' current values of C
+	// (the input value C minus the number of cycles this process has run)
+
+	Process *proc = list->first;
+	int sjIndex = 0;
+	int smallestC = proc->cCtr;
+
+	int size = list->size;
+	int ctr = 1;
+	while( ctr < size ){
+
+		if(proc->cCtr <= smallestC){
+			sjIndex = ctr;
+			smallestC = proc->cCtr;
+		}
+
+		ctr++;
+		if(proc->next != NULL)
+			proc = proc->next;
+	}
+
+	return sjIndex;
+}
+
 void initializeLists(){
 	// DONT DUPLICATE THE MEMORY (these lists should just have pointers to the elements)
 
@@ -306,7 +333,14 @@ void doReady(schedulingAlgo){
 	// Only mark as "running" if nobody else is running
 	if(ready.size && !running.size && cpuIsFree){
 		// Ready is FIFO (index 0)
-		Process *chosen = removeFromList(&ready, 0);
+		Process *chosen;
+
+		if(schedulingAlgo == USE_SJF){
+			int sjIndex = getShortestJobIndex(&ready);
+			chosen = removeFromList(&ready, sjIndex);
+		}else{
+			chosen = removeFromList(&ready, 0);
+		}
 
 
 		if(schedulingAlgo == USE_RR)
@@ -354,9 +388,9 @@ void doRunning(schedulingAlgo){
 	if(running.size){
 		// Only leave the list when the job is done
 		Process *runner = running.first;
-		runner->C--;
+		runner->cCtr--;
 
-		if( runner->C ){
+		if( runner->cCtr ){
 			// Still have CPU time left
 			runner->remBurst--;
 
@@ -408,8 +442,23 @@ void runSchedule(int schedulingAlgo){
 		
 		sysClock++;
 	}
+
+	printReport();
 	
 	free(processes);
+}
+
+void printReport(){
+
+	printf("\n");
+
+	Process proc;
+	int i;
+	for(i = 0; i < numProcesses; i++){
+		printf("Process %d:\n", i);
+
+		printf("\n");
+	}
 }
 
 void printCycle(){
