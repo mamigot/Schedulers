@@ -257,7 +257,7 @@ int getShortestJobIndex(ProcessList *list){
 	int smallestC = proc->cCtr;
 
 	int size = list->size;
-	int ctr = 1;
+	int ctr = 0;
 	while( ctr < size ){
 
 		if(proc->cCtr < smallestC){
@@ -470,6 +470,17 @@ void runSchedule(int schedulingAlgo){
 		doUnstarted();
 		doReady(schedulingAlgo);
 
+		/*
+		printProcess(processes[0]);
+		printf("   ");
+		printProcess(processes[1]);
+		printf("   ");
+		printProcess(processes[2]);
+		printf("\n");
+		printList("ready list", ready);
+		*/
+
+
 		updateWaitingTimes();
 
 		if( !isFinished() )
@@ -554,7 +565,7 @@ void printCycle(){
 
 void printProcess(Process proc){
 
-	printf("(%d %d %d %d)", proc.A, proc.B, proc.C, proc.IO);
+	printf("(%d %d %d %d -rem: %d -stat: %d)", proc.A, proc.B, proc.C, proc.IO, proc.cCtr, proc.status);
 }
 
 void printList(char* name, ProcessList list){
@@ -580,10 +591,10 @@ void printList(char* name, ProcessList list){
 int main(int argc, char *argv[]){
 
 	fpRandomNumbers = fopen("random-numbers.txt", "r");
-	fpInput = fopen("inputs/input-5.txt", "r");
+	fpInput = fopen("inputs/input-7.txt", "r");
 
 
-	runSchedule(USE_RR);
+	runSchedule(USE_SJF);
 
 
 	fclose(fpRandomNumbers);
