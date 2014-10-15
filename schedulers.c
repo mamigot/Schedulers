@@ -19,8 +19,9 @@
 #define USE_SJF 12
 #define USE_RR 13
 
+#define QUANTUM_RR 2
+
 #define isFinished() ( (unstarted.size || ready.size || running.size || blocked.size) == 0)
-#define getBurstCPU(proc) randomOS(proc->B)
 #define getBurstIO(proc) randomOS(proc->IO)
 
 
@@ -301,21 +302,24 @@ void doUnstarted(){
 	}
 }
 
-void doReady(){
+void doReady(schedulingAlgo){
 	// Only mark as "running" if nobody else is running
 	if(ready.size && !running.size && cpuIsFree){
 		// Ready is FIFO (index 0)
 		Process *chosen = removeFromList(&ready, 0);
 
-		// Get the burst
-		chosen->remBurst = getBurstCPU(chosen);
+
+		if(schedulingAlgo == USE_RR)
+			chosen->remBurst = QUANTUM_RR > chosen->B ? randomOS(chosen->B) : randomOS(QUANTUM_RR);
+		else
+			chosen->remBurst = randomOS(chosen->B);
+
 		chosen->status = IS_RUNNING;
 		insertEnd(&running, chosen);
 	}
 }
 
 void doBlocked(schedulingAlgo){
-
 	if(blocked.size){
 		// Process the burst and, once it's done, move the process to ready
 		// (this could apply to multiple processes)
@@ -346,79 +350,40 @@ void doBlocked(schedulingAlgo){
 	}
 }
 
-void doRunningUniprogramming(){
-	if(running.size){
-		// Only leave the list when the job is done
-		Process *runner = running.first;
-		runner->C--;
-
-		if( runner->C ){
-			// Still have CPU time left
-			runner->remBurst--;
-
-			if( !runner->remBurst ){
-				// Go to IO!
-				// (don't add new things to running in the meantime)
-				cpuIsFree = 0;
-
-				removeFromList(&running, 0);
-				runner->remBurst = getBurstIO(runner);
-				runner->status = IS_BLOCKED;
-				insertBeginning(&blocked, runner);
-			}
-
-		}else{
-			// Done with the CPU job!
-			runner->remBurst = 0;
-			cpuIsFree = 1;
-
-			removeFromList(&running, 0);
-			runner->status = IS_TERMINATED;
-			insertEnd(&terminated, runner);
-		}
-
-	}
-}
-
-void doRunningFcfs(){
-	if(running.size){
-		// Only leave the list when the job is done
-		Process *runner = running.first;
-		runner->C--;
-
-		if( runner->C ){
-			// Still have CPU time left
-			runner->remBurst--;
-
-			if( !runner->remBurst ){
-				// Go to IO!
-				cpuIsFree = 1;
-
-				removeFromList(&running, 0);
-				runner->remBurst = getBurstIO(runner);
-				runner->status = IS_BLOCKED;
-				insertBeginning(&blocked, runner);
-			}
-
-		}else{
-			// Done with the CPU job!
-			runner->remBurst = 0;
-			cpuIsFree = 1;
-
-			removeFromList(&running, 0);
-			runner->status = IS_TERMINATED;
-			insertEnd(&terminated, runner);
-		}
-
-	}
-}
-
 void doRunning(schedulingAlgo){
-	if(schedulingAlgo == USE_UNIPROGRAMMING)
-		doRunningUniprogramming();
+	if(running.size){
+		// Only leave the list when the job is done
+		Process *runner = running.first;
+		runner->C--;
 
-	else if(schedulingAlgo == USE_FCFS)
-		doRunningFcfs();
+		if( runner->C ){
+			// Still have CPU time left
+			runner->remBurst--;
+
+			if( !runner->remBurst ){
+				// Go to IO!
+				if(schedulingAlgo == USE_UNIPROGRAMMING)
+					cpuIsFree = 0;
+				else
+					cpuIsFree = 1;
+
+				removeFromList(&running, 0);
+				runner->remBurst = randomOS(runner->IO);
+				runner->status = IS_BLOCKED;
+				insertBeginning(&blocked, runner);
+			}
+
+		}else{
+			// Done with the CPU job!
+			runner->remBurst = 0;
+			cpuIsFree = 1;
+
+			removeFromList(&running, 0);
+			runner->status = IS_TERMINATED;
+			insertEnd(&terminated, runner);
+		}
+
+	}
 }
 
 void runSchedule(int schedulingAlgo){
@@ -436,7 +401,7 @@ void runSchedule(int schedulingAlgo){
  		doBlocked(schedulingAlgo);
 		doRunning(schedulingAlgo);
 		doUnstarted();
-		doReady();
+		doReady(schedulingAlgo);
 
 		if( !isFinished() )
 			printCycle();
@@ -509,7 +474,7 @@ int main(int argc, char *argv[]){
 	fpInput = fopen("inputs/input-7.txt", "r");
 
 
-	runSchedule(USE_FCFS);
+	runSchedule(USE_RR);
 
 
 	fclose(fpRandomNumbers);
