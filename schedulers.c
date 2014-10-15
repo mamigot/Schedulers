@@ -21,8 +21,7 @@
 
 #define QUANTUM_RR 2
 
-#define isFinished() ( (unstarted.size || ready.size || running.size || blocked.size) == 0)
-#define getBurstIO(proc) randomOS(proc->IO)
+#define isFinished() ((unstarted.size || ready.size || running.size || blocked.size) == 0)
 
 
 typedef struct Process{
@@ -42,7 +41,6 @@ typedef struct Process{
 	struct Process *prev;
 } Process;
 
-
 typedef struct{
 	Process *first;
 	Process *last;
@@ -51,6 +49,12 @@ typedef struct{
 	int size;
 } ProcessList;
 
+typedef struct{
+	int finishingTime;
+	int totCpuTime;
+	int totIoTime;
+} SummaryData;
+
 
 static FILE *fpRandomNumbers;
 static FILE *fpInput;
@@ -58,6 +62,7 @@ static FILE *fpInput;
 static int numProcesses;
 static Process *processes;
 
+static SummaryData *sd;
 static int sysClock;
 static int cpuIsFree = 1;
 
@@ -373,6 +378,8 @@ void doReady(schedulingAlgo){
 
 void doBlocked(schedulingAlgo){
 	if(blocked.size){
+		sd->totIoTime++;
+
 		// Process the burst and, once it's done, move the process to ready
 		// (this could apply to multiple processes)
 		Process *proc;
@@ -405,6 +412,8 @@ void doBlocked(schedulingAlgo){
 
 void doRunning(schedulingAlgo){
 	if(running.size){
+		sd->totCpuTime++;
+
 		// Only leave the list when the job is done
 		Process *runner = running.first;
 		runner->cCtr--;
@@ -445,6 +454,7 @@ void runSchedule(int schedulingAlgo){
 	sortProcessesByArrivalTime();
 
 	initializeLists();
+	sd = calloc(1, sizeof(SummaryData));
 	cpuIsFree = 1;
 	sysClock = 0;
 
@@ -465,19 +475,25 @@ void runSchedule(int schedulingAlgo){
 		sysClock++;
 	}
 
+	sd->finishingTime = sysClock - 2;
 	printReport();
 	
 	free(processes);
+	free(sd);
 }
 
 void printReport(){
 
 	printf("\n");
 
+	int totTurnaroundTime = 0;
+	int totWaitingTime = 0;
+
 	Process proc;
 	int i;
 	for(i = 0; i < numProcesses; i++){
 		proc = processes[i];
+
 		printf("Process %d:\n", i);
 
 		printf("\t (A,B,C,IO) = (%d, %d, %d, %d)\n", proc.A, proc.B, proc.C, proc.IO);
@@ -488,7 +504,18 @@ void printReport(){
 		printf("\t Waiting time: %d\n", proc.waitingTime);
 
 		printf("\n");
-	}
+
+		totTurnaroundTime += proc.finishingTime - proc.A;
+		totWaitingTime += proc.waitingTime;
+	}	
+
+	printf("Summary Data:\n");
+	printf("\t Finishing time: %d\n", sd->finishingTime);
+	printf("\t CPU Utilization: %f\n", ( sd->totCpuTime * 1.0 / sd->finishingTime ));
+	printf("\t I/O Utilization: %f\n", ( sd->totIoTime * 1.0 / sd->finishingTime ));
+	printf("\t Throughput: %f processes per hundred cycles\n", (100.0 * numProcesses / sd->finishingTime ));
+	printf("\t Average turnaround time: %f\n", ( totTurnaroundTime * 1.0 / numProcesses ));
+	printf("\t Average waiting time: %f\n", ( totWaitingTime * 1.0 / numProcesses ));
 }
 
 void printCycle(){
@@ -550,7 +577,7 @@ void printList(char* name, ProcessList list){
 int main(int argc, char *argv[]){
 
 	fpRandomNumbers = fopen("random-numbers.txt", "r");
-	fpInput = fopen("inputs/input-7.txt", "r");
+	fpInput = fopen("inputs/input-3.txt", "r");
 
 
 	runSchedule(USE_RR);
