@@ -273,6 +273,30 @@ int getShortestJobIndex(ProcessList *list){
 	return sjIndex;
 }
 
+int getEarliestJobIndex(ProcessList *list){
+	// Determined by the processes' arrival times
+
+	Process *proc = list->first;
+	int earliestIndex = 0;
+	int smallestA = proc->A;
+
+	int size = list->size;
+	int ctr = 0;
+	while( ctr < size ){
+
+		if(proc->A < smallestA){
+			earliestIndex = ctr;
+			smallestA = proc->A;
+		}
+
+		ctr++;
+		if(proc->next != NULL)
+			proc = proc->next;
+	}
+
+	return earliestIndex;
+}
+
 void initializeLists(){
 	// DONT DUPLICATE THE MEMORY (these lists should just have pointers to the elements)
 
@@ -361,6 +385,11 @@ void doReady(schedulingAlgo){
 		if(schedulingAlgo == USE_SJF){
 			int sjIndex = getShortestJobIndex(&ready);
 			chosen = removeFromList(&ready, sjIndex);
+
+		}else if(schedulingAlgo == USE_FCFS){
+			int earliestIndex = getEarliestJobIndex(&ready);
+			chosen = removeFromList(&ready, earliestIndex);
+
 		}else{
 			// FIFO (index 0)
 			chosen = removeFromList(&ready, 0);
