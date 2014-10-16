@@ -435,7 +435,11 @@ void doRunning(schedulingAlgo){
 				removeFromList(&running, 0);
 				runner->remBurst = randomOS(runner->IO);
 				runner->status = IS_BLOCKED;
-				insertBeginning(&blocked, runner);
+
+				if(schedulingAlgo == USE_FCFS)
+					insertEnd(&blocked, runner);
+				else
+					insertBeginning(&blocked, runner);
 			}
 
 		}else{
@@ -466,26 +470,24 @@ void runSchedule(int schedulingAlgo){
 	while( !isFinished() ){
 
  		doBlocked(schedulingAlgo);
+ 		//printList("ready list 1", ready);
+
 		doRunning(schedulingAlgo);
 		doUnstarted();
 		doReady(schedulingAlgo);
 
-		/*
-		printProcess(processes[0]);
-		printf("   ");
-		printProcess(processes[1]);
-		printf("   ");
-		printProcess(processes[2]);
-		printf("\n");
-		printList("ready list", ready);
-		*/
+
+		//printList("ready list 2", ready);
 
 
 		updateWaitingTimes();
 
 		if( !isFinished() )
 			printCycle();
-		
+
+		if(sysClock >= 1204)
+			break;
+
 		sysClock++;
 	}
 
@@ -591,10 +593,10 @@ void printList(char* name, ProcessList list){
 int main(int argc, char *argv[]){
 
 	fpRandomNumbers = fopen("random-numbers.txt", "r");
-	fpInput = fopen("inputs/input-7.txt", "r");
+	fpInput = fopen("inputs/input-4.txt", "r");
 
 
-	runSchedule(USE_SJF);
+	runSchedule(USE_FCFS);
 
 
 	fclose(fpRandomNumbers);
