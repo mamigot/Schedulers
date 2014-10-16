@@ -27,6 +27,8 @@
 typedef struct Process{
 	int A, B, C, IO;
 	int cCtr;
+	// Used to break ties
+	int startingPosition;
 
 	int status;
 	int remBurst;
@@ -248,6 +250,22 @@ void insertEnd(ProcessList *list, Process *proc){
 	list->size++;
 }
 
+Process *getNthElement(ProcessList *list, int position){
+	
+	int ctr = 0;
+	Process *proc = list->first;
+
+	while(proc != NULL){
+		if(ctr == position)
+			return proc;
+		else
+			ctr++;
+		proc = proc->next;
+	}
+
+	return NULL;
+}
+
 int getShortestJobIndex(ProcessList *list){
 	// Determined by the processes' current values of C
 	// (the input value C minus the number of cycles this process has run)
@@ -273,6 +291,26 @@ int getShortestJobIndex(ProcessList *list){
 	return sjIndex;
 }
 
+void swap(Process *A, Process *B){
+	// Swaps two nodes in a linked-list
+	if(A == NULL || B == NULL){
+		printf("\n\nSWAP: either A or B is null!\n\n");
+		return;
+	}
+
+	if(A->prev != NULL)
+		A->prev->next = B;
+
+	B->prev = A->prev;
+	A->next = B->next;
+
+	if(B->next != NULL)
+		B->next->prev = A;
+
+	B->next = A;
+	A->prev = B;
+}
+
 void initializeLists(){
 	// DONT DUPLICATE THE MEMORY (these lists should just have pointers to the elements)
 
@@ -289,6 +327,8 @@ void initializeLists(){
 		
 		if( i < numProcesses - 1 )
 			processes[i].next = &processes[i + 1];
+
+		processes[i].startingPosition = i;
 
 		processes[i].status = IS_UNSTARTED;
 		processes[i].remBurst = 0;
@@ -323,6 +363,29 @@ void updateWaitingTimes(){
 				proc = proc->next;
 			}
 		}
+	}
+}
+
+void sortRemainingByPosition(Process *first){
+	// Sorts the ending processes (those whose bursts are <= 1)
+	// by their starting position in the input
+	// (index denotes the index of "first")
+	
+	if(first == NULL)
+		return;
+
+	Process *i, *j;
+	i = first;
+	j = first->next;
+	while(i != NULL){
+		while(j != NULL){
+			if((i->remBurst == 1 && j->remBurst == 1) && (i->startingPosition > j->startingPosition)){
+				swap(i, j);
+			}
+
+			j = j->next;
+		}
+		i = i->next;
 	}
 }
 
@@ -391,8 +454,31 @@ void doBlocked(schedulingAlgo){
 			proc->ioTime++;
 
 			if( !proc->remBurst ){
-				temp = proc->next;
+				if(schedulingAlgo == USE_FCFS){
+					proc->remBurst++;
+					proc->ioTime--;
+					if(sysClock > 926)
+						printList("blocked (pre-sort)", blocked);
 
+					sortRemainingByPosition(proc);
+
+					proc = getNthElement(&blocked, ctr);
+
+					if(sysClock > 926){
+						printProcess(proc->prev);
+						printf("\n");
+						printProcess(proc);
+						printf("\n");
+
+						printf("but the list is...\n");
+						printList("blocked", blocked);
+					}
+
+					proc->remBurst--;
+					proc->ioTime++;
+				}
+
+				temp = proc->next;
 				removeFromList(&blocked, ctr);
 				proc->status = IS_READY;
 
@@ -470,25 +556,18 @@ void runSchedule(int schedulingAlgo){
 
 	while( !isFinished() ){
 
-		printList("blocked list", blocked);
  		doBlocked(schedulingAlgo);
-
 		doRunning(schedulingAlgo);
 		doUnstarted();
-		printList("ready list", ready);
-
 		doReady(schedulingAlgo);
-
-
-
 
 		updateWaitingTimes();
 
 		if( !isFinished() )
 			printCycle();
 
-		if(sysClock >= 937)
-			break;
+		//if(sysClock >= 937)
+		//	break;
 
 		sysClock++;
 	}
@@ -569,24 +648,20 @@ void printCycle(){
 
 void printProcess(Process proc){
 
-	printf("(%d %d %d %d -rem: %d -stat: %d)", proc.A, proc.B, proc.C, proc.IO, proc.cCtr, proc.status);
+	printf("(%d %d %d %d -rem: %d -position: %d)", proc.A, proc.B, proc.C, proc.IO, proc.cCtr, proc.startingPosition);
 }
 
 void printList(char* name, ProcessList list){
 	int sizeCtr = list.size;
 	printf("%s, size: (%d)\n", name, sizeCtr);
 
-	Process proc;
-	if(sizeCtr > 0)
-		proc = *list.first;
+	Process *proc = list.first;
 
-	while(sizeCtr > 0){
-		printProcess(proc);
+	while(proc != NULL){
+		printProcess(*proc);
 		printf(" ");
 
-		sizeCtr--;
-		if(sizeCtr > 0)
-			proc = *(proc.next);
+		proc = proc->next;
 	}
 
 	printf("\n\n");
