@@ -366,7 +366,7 @@ void updateWaitingTimes(){
 	}
 }
 
-void sortRemainingByPosition(Process *first){
+void sortRemainingByPosition(ProcessList *list, Process *first){
 	// Sorts the ending processes (those whose bursts are <= 1)
 	// by their starting position in the input
 	// (index denotes the index of "first")
@@ -374,6 +374,7 @@ void sortRemainingByPosition(Process *first){
 	if(first == NULL)
 		return;
 
+	int numIteratedElements = 1;
 	Process *i, *j;
 	i = first;
 	j = first->next;
@@ -385,7 +386,19 @@ void sortRemainingByPosition(Process *first){
 
 			j = j->next;
 		}
+
+		numIteratedElements++;
 		i = i->next;
+	}
+
+	if(numIteratedElements == list->size){
+		// We started from the first element
+		// Adjust the list's "first" pointer
+		i = first;
+		while(i->prev != NULL)
+			i = i->prev;
+
+		list->first = i;
 	}
 }
 
@@ -457,22 +470,9 @@ void doBlocked(schedulingAlgo){
 				if(schedulingAlgo == USE_FCFS){
 					proc->remBurst++;
 					proc->ioTime--;
-					if(sysClock > 926)
-						printList("blocked (pre-sort)", blocked);
 
-					sortRemainingByPosition(proc);
-
+					sortRemainingByPosition(&blocked, proc);
 					proc = getNthElement(&blocked, ctr);
-
-					if(sysClock > 926){
-						printProcess(proc->prev);
-						printf("\n");
-						printProcess(proc);
-						printf("\n");
-
-						printf("but the list is...\n");
-						printList("blocked", blocked);
-					}
 
 					proc->remBurst--;
 					proc->ioTime++;
@@ -565,9 +565,6 @@ void runSchedule(int schedulingAlgo){
 
 		if( !isFinished() )
 			printCycle();
-
-		//if(sysClock >= 937)
-		//	break;
 
 		sysClock++;
 	}
