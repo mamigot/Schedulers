@@ -32,6 +32,8 @@ typedef struct Process{
 
 	int status;
 	int remBurst;
+	// Applicable to Round Robin (RR)
+	int rrBurst;
 
 	int finishingTime;
 	int turnaroundTime;
@@ -444,7 +446,13 @@ void doReady(int schedulingAlgo){
 			chosen = removeFromList(&ready, 0);
 		}
 
-		chosen->remBurst = randomOS(chosen->B);
+		if(schedulingAlgo == USE_RR){
+			int sup = randomOS(chosen->B);
+			chosen->rrBurst = QUANTUM_RR < sup ? QUANTUM_RR : sup;
+		}
+
+		if(!chosen->remBurst) // previously, a burst was issued to all (the assumption is that nothing here has a remaining burst)
+			chosen->remBurst = randomOS(chosen->B);
 
 		chosen->status = IS_RUNNING;
 		insertEnd(&running, chosen);
@@ -513,6 +521,9 @@ void doRunning(int schedulingAlgo){
 			// Still have CPU time left
 			runner->remBurst--;
 
+			if( schedulingAlgo == USE_RR )
+				runner->rrBurst--;
+
 			if( !runner->remBurst ){
 				// Go to IO!
 				if(schedulingAlgo == USE_UNIPROGRAMMING)
@@ -530,10 +541,19 @@ void doRunning(int schedulingAlgo){
 					insertBeginning(&blocked, runner);
 			}
 
+			else if( schedulingAlgo == USE_RR )
+				if( !runner->rrBurst ){
+					removeFromList(&running, 0);
+					runner->status = IS_READY;
+					insertEnd(&ready, runner);
+				}
+
 		}else{
 			// Done with the CPU job!
 			runner->remBurst = 0;
 			cpuIsFree = 1;
+			if(schedulingAlgo == USE_RR)
+				runner->rrBurst = 0;
 
 			removeFromList(&running, 0);
 			runner->status = IS_TERMINATED;
@@ -564,11 +584,11 @@ void runSchedule(int schedulingAlgo){
 
 		updateWaitingTimes();
 
-		//if(sysClock >= 10)
-		//	exit(1);
+		if(sysClock > 7)
+			exit(1);
 
 		if( !isFinished() )
-			printCycle();
+			printCycle(schedulingAlgo);
 
 		sysClock++;
 	}
@@ -616,7 +636,7 @@ void printReport(){
 	printf("\t Average waiting time: %f\n", ( totWaitingTime * 1.0 / numProcesses ));
 }
 
-void printCycle(){
+void printCycle(int schedulingAlgo){
 	printf("Before cycle %5d: ", sysClock);
 
 	int i;
@@ -640,8 +660,10 @@ void printCycle(){
 			printf("%11s", "terminated");
 
 
-
-		printf("%3d", curr.remBurst);
+		if(schedulingAlgo == USE_RR && curr.status != IS_BLOCKED){
+			printf("%3d", curr.rrBurst);
+		}else
+			printf("%3d", curr.remBurst);
 	}
 
 	printf(".\n");
