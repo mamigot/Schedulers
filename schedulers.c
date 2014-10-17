@@ -114,7 +114,8 @@ void readInput(){
 
 	int A, B, C, IO;
 	Process curr;
-	for(int i = 0; i < numProcesses; i++){
+	int i;
+	for(i = 0; i < numProcesses; i++){
 		fscanf(fpInput, " ( %d %d %d %d ) ", &A, &B, &C, &IO);
 		curr = *ProcessCreate(A, B, C, IO);
 		processes[i] = curr;
@@ -123,7 +124,7 @@ void readInput(){
 
 	printf("The original input was: %d ", numProcesses);
 
-	for(int i = 0; i < numProcesses; i++){
+	for(i = 0; i < numProcesses; i++){
 		curr = processes[i];
 		printf("(%d %d %d %d) ", curr.A, curr.B, curr.C, curr.IO);
 	}
@@ -429,7 +430,7 @@ void doUnstarted(){
 	}
 }
 
-void doReady(schedulingAlgo){
+void doReady(int schedulingAlgo){
 	// Only mark as "running" if nobody else is running (single processor)
 	if(ready.size && !running.size && cpuIsFree){
 		Process *chosen;
@@ -450,7 +451,7 @@ void doReady(schedulingAlgo){
 	}
 }
 
-void doBlocked(schedulingAlgo){
+void doBlocked(int schedulingAlgo){
 	if(blocked.size){
 		sd->totIoTime++;
 
@@ -500,7 +501,7 @@ void doBlocked(schedulingAlgo){
 	}
 }
 
-void doRunning(schedulingAlgo){
+void doRunning(int schedulingAlgo){
 	if(running.size){
 		sd->totCpuTime++;
 
@@ -562,6 +563,9 @@ void runSchedule(int schedulingAlgo){
 		doReady(schedulingAlgo);
 
 		updateWaitingTimes();
+
+		//if(sysClock >= 10)
+		//	exit(1);
 
 		if( !isFinished() )
 			printCycle();
@@ -670,7 +674,7 @@ int main(int argc, char *argv[]){
 	fpInput = fopen("inputs/input-4.txt", "r");
 
 
-	runSchedule(USE_FCFS);
+	runSchedule(USE_RR);
 
 
 	fclose(fpRandomNumbers);
