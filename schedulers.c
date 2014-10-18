@@ -236,7 +236,6 @@ void insertEnd(ProcessList *list, Process *proc){
 
 
 	// Inserts the process at the end of the given list
-
 	int size = list->size;
 
 	if(size == 0){
@@ -261,8 +260,8 @@ Process *getNthElement(ProcessList *list, int position){
 	while(proc != NULL){
 		if(ctr == position)
 			return proc;
-		else
-			ctr++;
+		
+		ctr++;
 		proc = proc->next;
 	}
 
@@ -294,12 +293,22 @@ int getShortestJobIndex(ProcessList *list){
 	return sjIndex;
 }
 
-void swap(Process *A, Process *B){
+void swap(ProcessList *list, Process *A, Process *B){
 	// Swaps two nodes in a linked-list
 	if(A == NULL || B == NULL){
 		printf("\n\nSWAP: either A or B is null!\n\n");
 		return;
 	}
+
+
+	if(list->first->startingPosition == A->startingPosition)
+		list->first = B;
+	else if(list->first->startingPosition == B->startingPosition)
+		list->first = A;
+	if(list->last->startingPosition == A->startingPosition)
+		list->last = B;
+	else if(list->last->startingPosition == B->startingPosition)
+		list->last = A;
 
 	if(A->prev != NULL)
 		A->prev->next = B;
@@ -384,7 +393,7 @@ void sortRemainingByPosition(ProcessList *list, Process *first){
 	while(i != NULL){
 		while(j != NULL){
 			if((i->remBurst == 1 && j->remBurst == 1) && (i->startingPosition > j->startingPosition)){
-				swap(i, j);
+				swap(list, i, j);
 			}
 
 			j = j->next;
@@ -394,14 +403,39 @@ void sortRemainingByPosition(ProcessList *list, Process *first){
 		i = i->next;
 	}
 
+	// FOLLOWING MAY NOT BE NECESSARY
 	if(numIteratedElements == list->size){
 		// We started from the first element
 		// Adjust the list's "first" pointer
 		i = first;
 		while(i->prev != NULL)
 			i = i->prev;
+		j = first;
+		while(j->next != NULL)
+			j = j->next;
 
 		list->first = i;
+		list->last = j;
+	}
+}
+
+void sortByPosition(ProcessList *list){
+	if(list->size < 2)
+		return;
+
+	Process *i, *j;
+	i = list->first;
+	j = i->next;
+	while(i != NULL){
+		while(j != NULL){
+			if(i->startingPosition > j->startingPosition){
+				swap(list, i, j);
+			}
+
+			j = j->next;
+		}
+
+		i = i->next;
 	}
 }
 
@@ -446,14 +480,12 @@ void doReady(int schedulingAlgo){
 			chosen = removeFromList(&ready, 0);
 		}
 
-		if(schedulingAlgo == USE_RR){
-			int sup = randomOS(chosen->B);
-			chosen->rrBurst = QUANTUM_RR < sup ? QUANTUM_RR : sup;
-		}
-
 		if(!chosen->remBurst) // previously, a burst was issued to all (the assumption is that nothing here has a remaining burst)
 			chosen->remBurst = randomOS(chosen->B);
 
+		if(schedulingAlgo == USE_RR)
+			chosen->rrBurst = chosen->remBurst < QUANTUM_RR ? chosen->remBurst : QUANTUM_RR;
+	
 		chosen->status = IS_RUNNING;
 		insertEnd(&running, chosen);
 	}
@@ -541,12 +573,20 @@ void doRunning(int schedulingAlgo){
 					insertBeginning(&blocked, runner);
 			}
 
-			else if( schedulingAlgo == USE_RR )
+			else if( schedulingAlgo == USE_RR ){
 				if( !runner->rrBurst ){
 					removeFromList(&running, 0);
 					runner->status = IS_READY;
 					insertEnd(&ready, runner);
+
+					printList("ready then", ready);
+					swap(&ready, ready.first, ready.last);
+					printList("ready now", ready);
+
+					printf("\n");
+
 				}
+			}
 
 		}else{
 			// Done with the CPU job!
@@ -584,7 +624,7 @@ void runSchedule(int schedulingAlgo){
 
 		updateWaitingTimes();
 
-		if(sysClock > 7)
+		if(sysClock > 39)
 			exit(1);
 
 		if( !isFinished() )
@@ -693,7 +733,7 @@ void printList(char* name, ProcessList list){
 int main(int argc, char *argv[]){
 
 	fpRandomNumbers = fopen("random-numbers.txt", "r");
-	fpInput = fopen("inputs/input-4.txt", "r");
+	fpInput = fopen("inputs/input-5.txt", "r");
 
 
 	runSchedule(USE_RR);
