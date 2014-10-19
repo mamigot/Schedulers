@@ -34,6 +34,8 @@ typedef struct Process{
 	int remBurst;
 	// Applicable to Round Robin (RR)
 	int rrBurst;
+	// Last time it was in ready state
+	int readyTime;
 
 	int finishingTime;
 	int turnaroundTime;
@@ -293,7 +295,7 @@ int getShortestJobIndex(ProcessList *list){
 	return sjIndex;
 }
 
-int areLinksCorrect(ProcessList *list){
+int verifyOrderOfLinks(ProcessList *list){
 	// Checks if the forward and backward links are correct
 	Process *proc = list->first;
 
@@ -469,7 +471,7 @@ void sortRemainingByPosition(ProcessList *list, Process *first){
 	}
 }
 
-void sortByPosition(ProcessList *list){
+void sortByReadyTime(ProcessList *list){
 	if(list->size < 2)
 		return;
 
@@ -478,7 +480,7 @@ void sortByPosition(ProcessList *list){
 	j = i->next;
 	while(i != NULL){
 		while(j != NULL){
-			if(i->startingPosition > j->startingPosition)
+			if(i->startingPosition > j->startingPosition && i->readyTime == j->readyTime)
 				swap(list, i, j);
 			
 			j = j->next;
@@ -501,6 +503,7 @@ void doUnstarted(){
 				transient = removeFromList(&unstarted, counter);
 				insertEnd(&ready, transient);
 				transient->status = IS_READY;
+				transient->readyTime = sysClock;
 
 				// Reset the count after the unstarted list is modified
 				proc = unstarted.first;
@@ -529,7 +532,7 @@ void doReady(int schedulingAlgo){
 			chosen = removeFromList(&ready, 0);
 		}
 
-		if(!chosen->remBurst) // previously, a burst was issued to all (the assumption is that nothing here has a remaining burst)
+		if(!chosen->remBurst)
 			chosen->remBurst = randomOS(chosen->B);
 
 		if(schedulingAlgo == USE_RR)
@@ -571,6 +574,7 @@ void doBlocked(int schedulingAlgo){
 				temp = proc->next;
 				removeFromList(&blocked, ctr);
 				proc->status = IS_READY;
+				proc->readyTime = sysClock;
 
 				if(schedulingAlgo == USE_UNIPROGRAMMING)
 					insertBeginning(&ready, proc);
@@ -626,8 +630,8 @@ void doRunning(int schedulingAlgo){
 				if( !runner->rrBurst ){
 					removeFromList(&running, 0);
 					runner->status = IS_READY;
+					runner->readyTime = sysClock;
 					insertEnd(&ready, runner);
-					sortByPosition(&ready);
 				}
 			}
 
@@ -660,16 +664,15 @@ void runSchedule(int schedulingAlgo){
 
 	while( !isFinished() ){
 
- 		doBlocked(schedulingAlgo);
+		doBlocked(schedulingAlgo);
 		doRunning(schedulingAlgo);
 		doUnstarted();
+
+		if(schedulingAlgo == USE_RR)
+			sortByReadyTime(&ready);
 		doReady(schedulingAlgo);
 
 		updateWaitingTimes();
-
-		if(sysClock > 39)
-			exit(1);
-
 		if( !isFinished() )
 			printCycle(schedulingAlgo);
 
@@ -754,7 +757,7 @@ void printCycle(int schedulingAlgo){
 
 void printProcess(Process proc){
 
-	printf("(%d %d %d %d -rem: %d -position: %d)", proc.A, proc.B, proc.C, proc.IO, proc.cCtr, proc.startingPosition);
+	printf("(%d %d %d %d -rt: %d -position: %d)", proc.A, proc.B, proc.C, proc.IO, proc.readyTime, proc.startingPosition);
 }
 
 void printList(char* name, ProcessList list){
@@ -776,7 +779,7 @@ void printList(char* name, ProcessList list){
 int main(int argc, char *argv[]){
 
 	fpRandomNumbers = fopen("random-numbers.txt", "r");
-	fpInput = fopen("inputs/input-5.txt", "r");
+	fpInput = fopen("inputs/input-6.txt", "r");
 
 
 	runSchedule(USE_RR);
