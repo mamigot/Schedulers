@@ -339,17 +339,23 @@ void swap(ProcessList *list, Process *A, Process *B){
 
 	}else{
 		// Anything in the middle
-
-		if(firstPos == aPos){
-			B->next->prev = A;
-			list->first = B;
-
-		}else if(firstPos == bPos){
-			A->prev->next = B;
-			list->first = A;
+		if(firstPos == bPos || lastPos == aPos){
+			temp = B;
+			B = A;
+			A = temp;
 		}
 
+		if(firstPos == aPos || firstPos == bPos){
+			B->next->prev = A;
+			list->first = B;
+		}
+
+		if(lastPos == bPos || lastPos == aPos){
+			A->prev->next = B;
+			list->last = A;
+		}
 		
+
 		if(A->prev != NULL)
 			A->prev->next = B;
 
@@ -621,29 +627,7 @@ void doRunning(int schedulingAlgo){
 					removeFromList(&running, 0);
 					runner->status = IS_READY;
 					insertEnd(&ready, runner);
-
-					//removeFromList(&ready, 1);
-					printList("ready then", ready);
-					printf("\n");
-
-
-					swap(&ready, ready.last, ready.first);
-
-					printf("are links correct? %d\n\n", areLinksCorrect(&ready));
-
-					printProcess(ready.first->next);
-					printf("\n");
-
-					//printf("\n");
-					//exit(1);
-					//swap(&ready, ready.last, ready.first);
-					printList("\nready now", ready);
-					printf("\n");
-
-					exit(1);
-
-					
-
+					sortByPosition(&ready);
 				}
 			}
 
