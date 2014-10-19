@@ -293,6 +293,26 @@ int getShortestJobIndex(ProcessList *list){
 	return sjIndex;
 }
 
+int areLinksCorrect(ProcessList *list){
+	// Checks if the forward and backward links are correct
+	Process *proc = list->first;
+
+	if( !list->first || list->size == 0)
+		return -1;
+
+	int n = 1;
+	while(proc->next != NULL){
+		proc = proc->next;
+		n++;
+	}
+	while(proc->prev != NULL){
+		proc = proc->prev;
+		n--;
+	}
+
+	return n == 1;
+}
+
 void swap(ProcessList *list, Process *A, Process *B){
 	// Swaps two nodes in a linked-list
 	if(A == NULL || B == NULL || A->startingPosition == B->startingPosition)
@@ -319,6 +339,17 @@ void swap(ProcessList *list, Process *A, Process *B){
 
 	}else{
 		// Anything in the middle
+
+		if(firstPos == aPos){
+			B->next->prev = A;
+			list->first = B;
+
+		}else if(firstPos == bPos){
+			A->prev->next = B;
+			list->first = A;
+		}
+
+		
 		if(A->prev != NULL)
 			A->prev->next = B;
 
@@ -330,17 +361,6 @@ void swap(ProcessList *list, Process *A, Process *B){
 
 		B->next = A;
 		A->prev = B;
-
-		// Fix list->first and list->last
-		if(aPos == firstPos)
-			list->first = B;
-		else if(bPos == firstPos)
-			list->first = A;
-		
-		if(aPos == lastPos)
-			list->last = B;
-		else if(bPos == lastPos)
-			list->last = A;
 	}
 
 	list->first->prev = NULL;
@@ -606,9 +626,12 @@ void doRunning(int schedulingAlgo){
 					printList("ready then", ready);
 					printf("\n");
 
-					swap(&ready, ready.last, ready.first->next);
 
-					printProcess(ready.first->next->next);
+					swap(&ready, ready.last, ready.first);
+
+					printf("are links correct? %d\n\n", areLinksCorrect(&ready));
+
+					printProcess(ready.first->next);
 					printf("\n");
 
 					//printf("\n");
