@@ -6,4 +6,4 @@ main:
 	$(CC) $(CFLAGS) -o schedulers schedulers.c
 
 clean:
-	rm main 
+	rm schedulers 
