@@ -10,6 +10,7 @@ Implementation of the following scheduling algorithms for processes in C: First 
 The program accepts an input consisting of a series of processes wherein each is classified by an arrival time, a CPU burst, a total amount of CPU time it requires and an IO burst (A, B, C, IO).
 
 ### Compile
+The default option is a 32-bit machine. If necessary, modify the given Makefile to switch to 64-bit.
 ```
 make main
 ```
