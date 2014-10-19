@@ -15,7 +15,7 @@ make main
 ```
 
 ### Execute
-Either provide the text-based input as the first and only command line argument, or precede it by "--verbose" (options below). See sample [input files](inputs/) as well as their [corresponding outputs](outputs/).
+Either provide the text-based input as the first and only command line argument, or precede it by "--verbose" (options below). See sample [input files](inputs/).
 ```
 ./schedulers inputs/input-4.txt
 ./schedulers --verbose inputs/input-4.txt
