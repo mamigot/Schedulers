@@ -78,7 +78,7 @@ static ProcessList running;
 static ProcessList blocked;
 static ProcessList terminated;
 
-
+static int verbosity = 0;
 void printReport();
 void printCycle();
 void printProcess();
@@ -101,12 +101,14 @@ Process *ProcessCreate(int A, int B, int C, int IO){
 int randomOS(int u){
 
 	int curr;
-	if(fpRandomNumbers != NULL){
+	if(fpRandomNumbers){
 		fscanf(fpRandomNumbers, "%d", &curr);
 		return 1 + (curr % u);
+	}else{
+		fputs("Can't read the file with the random numbers! Are you sure it's in this directory?\n", stderr);
+		exit(0);
 	}
 
-	return -1;
 }
 
 void readInput(){
@@ -645,7 +647,8 @@ void runSchedule(int schedulingAlgo){
 	cpuIsFree = 1;
 	sysClock = 0;
 
-	printf("This detailed printout gives the state and remaining burst for each process\n\n");
+	if(verbosity)
+		printf("This detailed printout gives the state and remaining burst for each process\n\n");
 
 	while( !isFinished() ){
 
@@ -658,7 +661,7 @@ void runSchedule(int schedulingAlgo){
 		doReady(schedulingAlgo);
 
 		updateWaitingTimes();
-		if( !isFinished() )
+		if( verbosity && !isFinished() )
 			printCycle(schedulingAlgo);
 
 		sysClock++;
@@ -764,10 +767,22 @@ void printList(char* name, ProcessList list){
 int main(int argc, char *argv[]){
 
 	fpRandomNumbers = fopen("random-numbers.txt", "r");
-	fpInput = fopen("inputs/input-4.txt", "r");
 
+	if(strcmp(argv[1], "--verbose") == 0){
+		verbosity = 1;
+		fpInput = fopen(argv[2], "r");
 
-	runSchedule(USE_FCFS);
+	}else{
+		verbosity = 0;
+		fpInput = fopen(argv[1], "r");
+	}
+
+	if(!fpInput){
+		fputs("Can't read the input file!\nPlease provide its path as the first argument or as the second, if you are using \"--verbose\".\n", stderr);
+		exit(0);
+	}
+
+	runSchedule(USE_UNIPROGRAMMING);
 
 
 	fclose(fpRandomNumbers);
