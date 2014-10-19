@@ -96,7 +96,6 @@ Process *ProcessCreate(int A, int B, int C, int IO){
 }
 
 int randomOS(int u){
-
 	int curr;
 	if(fpRandomNumbers){
 		fscanf(fpRandomNumbers, "%d", &curr);
@@ -108,7 +107,10 @@ int randomOS(int u){
 }
 
 void readInput(){
+	// Professor expects the random number pointer to reset each time
+	fpRandomNumbers = fopen("random-numbers.txt", "r");
 	fpInput = fopen(filePath, "r");
+
 	if(!fpInput){
 		fputs("Can't read the input file!\nPlease provide its path as the first argument or as the second, if you are using \"--verbose\".\n", stderr);
 		exit(0);
@@ -138,6 +140,11 @@ void readInput(){
 	}
 
 	printf("\n");
+}
+
+void closeInput(){
+	fclose(fpRandomNumbers);
+	fclose(fpInput);
 }
 
 void sortProcessesByArrivalTime(){
@@ -674,6 +681,8 @@ void runSchedule(int schedulingAlgo){
 	
 	free(processes);
 	free(sd);
+
+	closeInput();
 }
 
 void printReport(){
@@ -768,8 +777,6 @@ void printList(char* name, ProcessList list){
 
 int main(int argc, char *argv[]){
 
-	fpRandomNumbers = fopen("random-numbers.txt", "r");
-
 	if(strcmp(argv[1], "--verbose") == 0){
 		verbosity = 1;
 		filePath = argv[2];
@@ -793,9 +800,5 @@ int main(int argc, char *argv[]){
 
 	printf("SHORTEST JOB FIRST:\n");
 	runSchedule(USE_SJF);
-
-
-	fclose(fpRandomNumbers);
-	fclose(fpInput);
 
 }
