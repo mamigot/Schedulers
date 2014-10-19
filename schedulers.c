@@ -2,18 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* General order:
-	1. Blocked
-	2. Running
-	3. Unstarted
-	4. Ready
-*/
+// Available states
 #define IS_BLOCKED 1
 #define IS_RUNNING 2
 #define IS_UNSTARTED 3
 #define IS_READY 4
 #define IS_TERMINATED 5
 
+// Scheduling algorithms
 #define USE_UNIPROGRAMMING 10
 #define USE_FCFS 11
 #define USE_SJF 12
@@ -797,7 +793,7 @@ int main(int argc, char *argv[]){
 
 	printf("SHORTEST JOB FIRST:\n");
 	runSchedule(USE_SJF);
-	printf("\n\n\n");
+
 
 	fclose(fpRandomNumbers);
 	fclose(fpInput);
