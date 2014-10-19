@@ -454,21 +454,6 @@ void sortRemainingByPosition(ProcessList *list, Process *first){
 		numIteratedElements++;
 		i = i->next;
 	}
-
-	// FOLLOWING MAY NOT BE NECESSARY
-	if(numIteratedElements == list->size){
-		// We started from the first element
-		// Adjust the list's "first" pointer
-		i = first;
-		while(i->prev != NULL)
-			i = i->prev;
-		j = first;
-		while(j->next != NULL)
-			j = j->next;
-
-		list->first = i;
-		list->last = j;
-	}
 }
 
 void sortByReadyTime(ProcessList *list){
@@ -779,10 +764,10 @@ void printList(char* name, ProcessList list){
 int main(int argc, char *argv[]){
 
 	fpRandomNumbers = fopen("random-numbers.txt", "r");
-	fpInput = fopen("inputs/input-6.txt", "r");
+	fpInput = fopen("inputs/input-4.txt", "r");
 
 
-	runSchedule(USE_RR);
+	runSchedule(USE_FCFS);
 
 
 	fclose(fpRandomNumbers);
