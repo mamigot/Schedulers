@@ -295,32 +295,56 @@ int getShortestJobIndex(ProcessList *list){
 
 void swap(ProcessList *list, Process *A, Process *B){
 	// Swaps two nodes in a linked-list
-	if(A == NULL || B == NULL){
-		printf("\n\nSWAP: either A or B is null!\n\n");
+	if(A == NULL || B == NULL || A->startingPosition == B->startingPosition)
 		return;
+	
+	int aPos = A->startingPosition;
+	int bPos = B->startingPosition;
+	int firstPos = list->first->startingPosition;
+	int lastPos = list->last->startingPosition;
+	
+	Process *temp;
+
+	// Special case: switching the first and last elements
+	if((firstPos == aPos && lastPos == bPos) || (firstPos == bPos && lastPos == aPos)){
+
+		list->first->prev = list->last->prev;
+		list->last->next = list->first->next;
+		list->first->next->prev = list->last;
+		list->last->prev->next = list->first;
+
+		temp = list->first;
+		list->first = list->last;
+		list->last = temp;
+
+	}else{
+		// Anything in the middle
+		if(A->prev != NULL)
+			A->prev->next = B;
+
+		B->prev = A->prev;
+		A->next = B->next;
+
+		if(B->next != NULL)
+			B->next->prev = A;
+
+		B->next = A;
+		A->prev = B;
+
+		// Fix list->first and list->last
+		if(aPos == firstPos)
+			list->first = B;
+		else if(bPos == firstPos)
+			list->first = A;
+		
+		if(aPos == lastPos)
+			list->last = B;
+		else if(bPos == lastPos)
+			list->last = A;
 	}
 
-
-	if(list->first->startingPosition == A->startingPosition)
-		list->first = B;
-	else if(list->first->startingPosition == B->startingPosition)
-		list->first = A;
-	if(list->last->startingPosition == A->startingPosition)
-		list->last = B;
-	else if(list->last->startingPosition == B->startingPosition)
-		list->last = A;
-
-	if(A->prev != NULL)
-		A->prev->next = B;
-
-	B->prev = A->prev;
-	A->next = B->next;
-
-	if(B->next != NULL)
-		B->next->prev = A;
-
-	B->next = A;
-	A->prev = B;
+	list->first->prev = NULL;
+	list->last->next = NULL;
 }
 
 void initializeLists(){
@@ -428,10 +452,9 @@ void sortByPosition(ProcessList *list){
 	j = i->next;
 	while(i != NULL){
 		while(j != NULL){
-			if(i->startingPosition > j->startingPosition){
+			if(i->startingPosition > j->startingPosition)
 				swap(list, i, j);
-			}
-
+			
 			j = j->next;
 		}
 
@@ -579,11 +602,24 @@ void doRunning(int schedulingAlgo){
 					runner->status = IS_READY;
 					insertEnd(&ready, runner);
 
+					//removeFromList(&ready, 1);
 					printList("ready then", ready);
-					swap(&ready, ready.first, ready.last);
-					printList("ready now", ready);
-
 					printf("\n");
+
+					swap(&ready, ready.last, ready.first->next);
+
+					printProcess(ready.first->next->next);
+					printf("\n");
+
+					//printf("\n");
+					//exit(1);
+					//swap(&ready, ready.last, ready.first);
+					printList("\nready now", ready);
+					printf("\n");
+
+					exit(1);
+
+					
 
 				}
 			}
@@ -715,6 +751,7 @@ void printProcess(Process proc){
 }
 
 void printList(char* name, ProcessList list){
+
 	int sizeCtr = list.size;
 	printf("%s, size: (%d)\n", name, sizeCtr);
 
@@ -723,7 +760,6 @@ void printList(char* name, ProcessList list){
 	while(proc != NULL){
 		printProcess(*proc);
 		printf(" ");
-
 		proc = proc->next;
 	}
 
