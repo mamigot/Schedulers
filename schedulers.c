@@ -62,6 +62,7 @@ typedef struct{
 } SummaryData;
 
 
+static char *filePath;
 static FILE *fpRandomNumbers;
 static FILE *fpInput;
 
@@ -108,10 +109,15 @@ int randomOS(int u){
 		fputs("Can't read the file with the random numbers! Are you sure it's in this directory?\n", stderr);
 		exit(0);
 	}
-
 }
 
 void readInput(){
+	fpInput = fopen(filePath, "r");
+	if(!fpInput){
+		fputs("Can't read the input file!\nPlease provide its path as the first argument or as the second, if you are using \"--verbose\".\n", stderr);
+		exit(0);
+	}
+
 	// The first integer of the file gives the total number of processes
 	fscanf(fpInput, "%d", &numProcesses);
 
@@ -770,20 +776,28 @@ int main(int argc, char *argv[]){
 
 	if(strcmp(argv[1], "--verbose") == 0){
 		verbosity = 1;
-		fpInput = fopen(argv[2], "r");
+		filePath = argv[2];
 
 	}else{
 		verbosity = 0;
-		fpInput = fopen(argv[1], "r");
+		filePath = argv[1];
 	}
 
-	if(!fpInput){
-		fputs("Can't read the input file!\nPlease provide its path as the first argument or as the second, if you are using \"--verbose\".\n", stderr);
-		exit(0);
-	}
+	printf("FIRST COME FIRST SERVE:\n");
+	runSchedule(USE_FCFS);
+	printf("\n\n\n");
 
+	printf("ROUND ROBIN:\n");
+	runSchedule(USE_RR);
+	printf("\n\n\n");
+
+	printf("UNIPROGRAMMING:\n");
 	runSchedule(USE_UNIPROGRAMMING);
+	printf("\n\n\n");
 
+	printf("SHORTEST JOB FIRST:\n");
+	runSchedule(USE_SJF);
+	printf("\n\n\n");
 
 	fclose(fpRandomNumbers);
 	fclose(fpInput);
