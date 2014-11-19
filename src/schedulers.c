@@ -108,7 +108,7 @@ int randomOS(int u){
 
 void readInput(){
 	// Professor expects the random number pointer to reset each time
-	fpRandomNumbers = fopen("random-numbers.txt", "r");
+	fpRandomNumbers = fopen("inputs/random-numbers.txt", "r");
 	fpInput = fopen(filePath, "r");
 
 	if(!fpInput){
@@ -189,7 +189,7 @@ Process *removeFromList(ProcessList *list, int index){
 		proc = proc->next;
 		counter++;
 	}
-		
+
 	// proc is the process we want to delete
 	if(size == 1){
 		list->first = NULL;
@@ -266,14 +266,14 @@ void insertEnd(ProcessList *list, Process *proc){
 }
 
 Process *getNthElement(ProcessList *list, int position){
-	
+
 	int ctr = 0;
 	Process *proc = list->first;
 
 	while(proc != NULL){
 		if(ctr == position)
 			return proc;
-		
+
 		ctr++;
 		proc = proc->next;
 	}
@@ -330,12 +330,12 @@ void swap(ProcessList *list, Process *A, Process *B){
 	// Swaps two nodes in a linked-list
 	if(A == NULL || B == NULL || A->startingPosition == B->startingPosition)
 		return;
-	
+
 	int aPos = A->startingPosition;
 	int bPos = B->startingPosition;
 	int firstPos = list->first->startingPosition;
 	int lastPos = list->last->startingPosition;
-	
+
 	Process *temp;
 
 	// Special case: switching the first and last elements
@@ -367,7 +367,7 @@ void swap(ProcessList *list, Process *A, Process *B){
 			A->prev->next = B;
 			list->last = A;
 		}
-		
+
 
 		if(A->prev != NULL)
 			A->prev->next = B;
@@ -391,7 +391,7 @@ void initializeLists(){
 
 	unstarted.first = processes;
 	unstarted.last = &processes[numProcesses - 1];
-	
+
 	unstarted.kind = IS_UNSTARTED;
 	unstarted.size = numProcesses;
 
@@ -399,7 +399,7 @@ void initializeLists(){
 	for(i = 0; i < numProcesses; i++){
 		if( i > 0 )
 			processes[i].prev = &processes[i - 1];
-		
+
 		if( i < numProcesses - 1 )
 			processes[i].next = &processes[i + 1];
 
@@ -445,7 +445,7 @@ void sortRemainingByPosition(ProcessList *list, Process *first){
 	// Sorts the ending processes (those whose bursts are <= 1)
 	// by their starting position in the input
 	// (index denotes the index of "first")
-	
+
 	if(first == NULL)
 		return;
 
@@ -478,7 +478,7 @@ void sortByReadyTime(ProcessList *list){
 		while(j != NULL){
 			if(i->startingPosition > j->startingPosition && i->readyTime == j->readyTime)
 				swap(list, i, j);
-			
+
 			j = j->next;
 		}
 
@@ -533,7 +533,7 @@ void doReady(int schedulingAlgo){
 
 		if(schedulingAlgo == USE_RR)
 			chosen->rrBurst = chosen->remBurst < QUANTUM_RR ? chosen->remBurst : QUANTUM_RR;
-	
+
 		chosen->status = IS_RUNNING;
 		insertEnd(&running, chosen);
 	}
@@ -547,7 +547,7 @@ void doBlocked(int schedulingAlgo){
 		// (this could apply to multiple processes)
 		Process *proc;
 		Process *temp;
-		
+
 		proc = blocked.first;
 
 		int ctr = 0;
@@ -576,7 +576,7 @@ void doBlocked(int schedulingAlgo){
 					insertBeginning(&ready, proc);
 				else
 					insertEnd(&ready, proc);
-				
+
 				cpuIsFree = 1;
 				proc = temp;
 
@@ -586,7 +586,7 @@ void doBlocked(int schedulingAlgo){
 			}
 
 		}
-		
+
 	}
 }
 
@@ -678,7 +678,7 @@ void runSchedule(int schedulingAlgo){
 
 	sd->finishingTime = sysClock - 2;
 	printReport();
-	
+
 	free(processes);
 	free(sd);
 
@@ -710,7 +710,7 @@ void printReport(){
 
 		totTurnaroundTime += proc.finishingTime - proc.A;
 		totWaitingTime += proc.waitingTime;
-	}	
+	}
 
 	printf("Summary Data:\n");
 	printf("\t Finishing time: %d\n", sd->finishingTime);
