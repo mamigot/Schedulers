@@ -23,7 +23,8 @@ Either provide the text-based input as the first and only command line argument,
 ```
 
 
-**Upcoming fixes**
+
+####Upcoming fixes
 * At the beginning of the programs, constants that should be defined as enums are being defined as integers
 * Linked-list functions should be completely abstracted from the file
 * Some lines are too long
