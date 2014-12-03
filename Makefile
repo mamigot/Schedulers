@@ -3,7 +3,7 @@ CFLAGS=-m32 -std=c99
 
 
 main:
-	$(CC) $(CFLAGS) -o schedulers schedulers.c
+	$(CC) $(CFLAGS) -o schedulers src/schedulers.c
 
 clean:
 	rm schedulers 

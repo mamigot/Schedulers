@@ -2,36 +2,22 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Available states
-#define IS_BLOCKED 1
-#define IS_RUNNING 2
-#define IS_UNSTARTED 3
-#define IS_READY 4
-#define IS_TERMINATED 5
-
-// Scheduling algorithms
-#define USE_UNIPROGRAMMING 10
-#define USE_FCFS 11
-#define USE_SJF 12
-#define USE_RR 13
 
 #define QUANTUM_RR 2
-
 #define isFinished() ((unstarted.size || ready.size || running.size || blocked.size) == 0)
 
+enum algorithms { UNIPROGRAMMING, FCFS, SJF, RR }; // Relevant scheduling algorithms
+enum stateType { BLOCKED, RUNNING, READY, UNSTARTED, TERMINATED };
 
 typedef struct Process{
 	int A, B, C, IO;
 	int cCtr;
-	// Used to break ties
 	int startingPosition;
 
-	int status;
+	enum stateType status;
 	int remBurst;
-	// Applicable to Round Robin (RR)
-	int rrBurst;
-	// Last time it was in ready state
-	int readyTime;
+	int rrBurst; 	// Applicable to Round Robin (RR)
+	int readyTime; // Last time in ready state
 
 	int finishingTime;
 	int turnaroundTime;
@@ -47,7 +33,7 @@ typedef struct{
 	Process *first;
 	Process *last;
 
-	int kind;
+	enum stateType kind;
 	int size;
 } ProcessList;
 
@@ -82,15 +68,14 @@ void printProcess();
 void printList();
 
 Process *ProcessCreate(int A, int B, int C, int IO){
-	// Parameters (time units):
-	// Arrival, (CPU) Burst, CPU Needed, (I/O) Burst
 	Process *proc = malloc(sizeof(Process));
 
-	proc->A = A;
-	proc->B = B;
-	proc->C = C;
+	// Parameters (in time units):
+	proc->A = A; // Arrival time
+	proc->B = B; // CPU burst (maximum)
+	proc->C = C; // CPU time needed
 	proc->cCtr = C;
-	proc->IO = IO;
+	proc->IO = IO; // I/O time needed
 
 	return proc;
 }
@@ -101,18 +86,20 @@ int randomOS(int u){
 		fscanf(fpRandomNumbers, "%d", &curr);
 		return 1 + (curr % u);
 	}else{
-		fputs("Can't read the file with the random numbers! Are you sure it's in this directory?\n", stderr);
+		fputs("Can't read the file with the random numbers! \
+			Are you sure it's in this directory?\n", stderr);
 		exit(0);
 	}
 }
 
 void readInput(){
-	// Professor expects the random number pointer to reset each time
 	fpRandomNumbers = fopen("inputs/random-numbers.txt", "r");
 	fpInput = fopen(filePath, "r");
 
 	if(!fpInput){
-		fputs("Can't read the input file!\nPlease provide its path as the first argument or as the second, if you are using \"--verbose\".\n", stderr);
+		fputs("Can't read the input file!\n \
+			Please provide its path as the first argument or as the second, \
+			if you are using \"--verbose\".\n", stderr);
 		exit(0);
 	}
 
@@ -122,9 +109,7 @@ void readInput(){
 	// Create the array of processes
 	processes = malloc(sizeof(Process) * numProcesses);
 
-	int A, B, C, IO;
-	Process curr;
-	int i;
+	Process curr; int A, B, C, IO; int i;
 	for(i = 0; i < numProcesses; i++){
 		fscanf(fpInput, " ( %d %d %d %d ) ", &A, &B, &C, &IO);
 		curr = *ProcessCreate(A, B, C, IO);
@@ -220,7 +205,6 @@ Process *removeFromList(ProcessList *list, int index){
 }
 
 void insertBeginning(ProcessList *list, Process *proc){
-	// DEBUG
 	if(proc->next != NULL || proc->prev != NULL)
 		printf("\n\n(!) inserting an element whose front or back pointer isn't null!\n\n");
 
@@ -243,7 +227,6 @@ void insertBeginning(ProcessList *list, Process *proc){
 }
 
 void insertEnd(ProcessList *list, Process *proc){
-	// DEBUG
 	if(proc->next != NULL || proc->prev != NULL)
 		printf("\n\n(!) inserting an element whose front or back pointer isn't null!\n\n");
 
@@ -387,12 +370,11 @@ void swap(ProcessList *list, Process *A, Process *B){
 }
 
 void initializeLists(){
-	// DONT DUPLICATE THE MEMORY (these lists should just have pointers to the elements)
 
 	unstarted.first = processes;
 	unstarted.last = &processes[numProcesses - 1];
 
-	unstarted.kind = IS_UNSTARTED;
+	unstarted.kind = UNSTARTED;
 	unstarted.size = numProcesses;
 
 	int i;
@@ -405,23 +387,23 @@ void initializeLists(){
 
 		processes[i].startingPosition = i;
 
-		processes[i].status = IS_UNSTARTED;
+		processes[i].status = UNSTARTED;
 		processes[i].remBurst = 0;
 		processes[i].ioTime = 0;
 		processes[i].waitingTime = 0;
 	}
 
 
-	ready.kind = IS_READY;
+	ready.kind = READY;
 	ready.size = 0;
 
-	running.kind = IS_RUNNING;
+	running.kind = RUNNING;
 	running.size = 0;
 
-	blocked.kind = IS_BLOCKED;
+	blocked.kind = BLOCKED;
 	blocked.size = 0;
 
-	terminated.kind = IS_TERMINATED;
+	terminated.kind = TERMINATED;
 	terminated.size = 0;
 }
 
@@ -455,10 +437,10 @@ void sortRemainingByPosition(ProcessList *list, Process *first){
 	j = first->next;
 	while(i != NULL){
 		while(j != NULL){
-			if((i->remBurst == 1 && j->remBurst == 1) && (i->startingPosition > j->startingPosition)){
+			if((i->remBurst == 1 && j->remBurst == 1) &&
+			   (i->startingPosition > j->startingPosition))
 				swap(list, i, j);
-			}
-
+			
 			j = j->next;
 		}
 
@@ -498,7 +480,7 @@ void doUnstarted(){
 			if(sysClock >= proc->A + 1){
 				transient = removeFromList(&unstarted, counter);
 				insertEnd(&ready, transient);
-				transient->status = IS_READY;
+				transient->status = READY;
 				transient->readyTime = sysClock;
 
 				// Reset the count after the unstarted list is modified
@@ -514,12 +496,12 @@ void doUnstarted(){
 	}
 }
 
-void doReady(int schedulingAlgo){
+void doReady(enum algorithms schedulingAlgo){
 	// Only mark as "running" if nobody else is running (single processor)
 	if(ready.size && !running.size && cpuIsFree){
 		Process *chosen;
 
-		if(schedulingAlgo == USE_SJF){
+		if(schedulingAlgo == SJF){
 			int sjIndex = getShortestJobIndex(&ready);
 			chosen = removeFromList(&ready, sjIndex);
 
@@ -531,15 +513,15 @@ void doReady(int schedulingAlgo){
 		if(!chosen->remBurst)
 			chosen->remBurst = randomOS(chosen->B);
 
-		if(schedulingAlgo == USE_RR)
+		if(schedulingAlgo == RR)
 			chosen->rrBurst = chosen->remBurst < QUANTUM_RR ? chosen->remBurst : QUANTUM_RR;
 
-		chosen->status = IS_RUNNING;
+		chosen->status = RUNNING;
 		insertEnd(&running, chosen);
 	}
 }
 
-void doBlocked(int schedulingAlgo){
+void doBlocked(enum algorithms schedulingAlgo){
 	if(blocked.size){
 		sd->totIoTime++;
 
@@ -556,7 +538,7 @@ void doBlocked(int schedulingAlgo){
 			proc->ioTime++;
 
 			if( !proc->remBurst ){
-				if(schedulingAlgo == USE_FCFS){
+				if(schedulingAlgo == FCFS){
 					proc->remBurst++;
 					proc->ioTime--;
 
@@ -569,10 +551,10 @@ void doBlocked(int schedulingAlgo){
 
 				temp = proc->next;
 				removeFromList(&blocked, ctr);
-				proc->status = IS_READY;
+				proc->status = READY;
 				proc->readyTime = sysClock;
 
-				if(schedulingAlgo == USE_UNIPROGRAMMING)
+				if(schedulingAlgo == UNIPROGRAMMING)
 					insertBeginning(&ready, proc);
 				else
 					insertEnd(&ready, proc);
@@ -590,7 +572,7 @@ void doBlocked(int schedulingAlgo){
 	}
 }
 
-void doRunning(int schedulingAlgo){
+void doRunning(enum algorithms schedulingAlgo){
 	if(running.size){
 		sd->totCpuTime++;
 
@@ -602,30 +584,30 @@ void doRunning(int schedulingAlgo){
 			// Still have CPU time left
 			runner->remBurst--;
 
-			if( schedulingAlgo == USE_RR )
+			if( schedulingAlgo == RR )
 				runner->rrBurst--;
 
 			if( !runner->remBurst ){
 				// Go to IO!
-				if(schedulingAlgo == USE_UNIPROGRAMMING)
+				if(schedulingAlgo == UNIPROGRAMMING)
 					cpuIsFree = 0;
 				else
 					cpuIsFree = 1;
 
 				removeFromList(&running, 0);
 				runner->remBurst = randomOS(runner->IO);
-				runner->status = IS_BLOCKED;
+				runner->status = BLOCKED;
 
-				if(schedulingAlgo == USE_FCFS)
+				if(schedulingAlgo == FCFS)
 					insertEnd(&blocked, runner);
 				else
 					insertBeginning(&blocked, runner);
 			}
 
-			else if( schedulingAlgo == USE_RR ){
+			else if( schedulingAlgo == RR ){
 				if( !runner->rrBurst ){
 					removeFromList(&running, 0);
-					runner->status = IS_READY;
+					runner->status = READY;
 					runner->readyTime = sysClock;
 					insertEnd(&ready, runner);
 				}
@@ -635,11 +617,11 @@ void doRunning(int schedulingAlgo){
 			// Done with the CPU job!
 			runner->remBurst = 0;
 			cpuIsFree = 1;
-			if(schedulingAlgo == USE_RR)
+			if(schedulingAlgo == RR)
 				runner->rrBurst = 0;
 
 			removeFromList(&running, 0);
-			runner->status = IS_TERMINATED;
+			runner->status = TERMINATED;
 			runner->finishingTime = sysClock - 1;
 			insertEnd(&terminated, runner);
 		}
@@ -647,7 +629,7 @@ void doRunning(int schedulingAlgo){
 	}
 }
 
-void runSchedule(int schedulingAlgo){
+void runSchedule(enum algorithms schedulingAlgo){
 	readInput();
 	sortProcessesByArrivalTime();
 
@@ -665,7 +647,7 @@ void runSchedule(int schedulingAlgo){
 		doRunning(schedulingAlgo);
 		doUnstarted();
 
-		if(schedulingAlgo == USE_RR)
+		if(schedulingAlgo == RR)
 			sortByReadyTime(&ready);
 		doReady(schedulingAlgo);
 
@@ -721,31 +703,30 @@ void printReport(){
 	printf("\t Average waiting time: %f\n", ( totWaitingTime * 1.0 / numProcesses ));
 }
 
-void printCycle(int schedulingAlgo){
+void printCycle(enum algorithms schedulingAlgo){
 	printf("Before cycle %5d: ", sysClock);
 
-	int i;
-	Process curr;
+	Process curr; int i;
 	for(i = 0; i < numProcesses; i++){
 		curr = processes[i];
 
-		if(curr.status == IS_BLOCKED)
+		if(curr.status == BLOCKED)
 			printf("%11s", "blocked");
 
-		else if(curr.status == IS_RUNNING)
+		else if(curr.status == RUNNING)
 			printf("%11s", "running");
 
-		else if(curr.status == IS_UNSTARTED)
+		else if(curr.status == UNSTARTED)
 			printf("%11s", "unstarted");
 
-		else if(curr.status == IS_READY)
+		else if(curr.status == READY)
 			printf("%11s", "ready");
 
-		else if(curr.status == IS_TERMINATED)
+		else if(curr.status == TERMINATED)
 			printf("%11s", "terminated");
 
 
-		if(schedulingAlgo == USE_RR && curr.status != IS_BLOCKED){
+		if(schedulingAlgo == RR && curr.status != BLOCKED){
 			printf("%3d", curr.rrBurst);
 		}else
 			printf("%3d", curr.remBurst);
@@ -756,7 +737,8 @@ void printCycle(int schedulingAlgo){
 
 void printProcess(Process proc){
 
-	printf("(%d %d %d %d -rt: %d -position: %d)", proc.A, proc.B, proc.C, proc.IO, proc.readyTime, proc.startingPosition);
+	printf("(%d %d %d %d -rt: %d -position: %d)",
+		proc.A, proc.B, proc.C, proc.IO, proc.readyTime, proc.startingPosition);
 }
 
 void printList(char* name, ProcessList list){
@@ -787,18 +769,18 @@ int main(int argc, char *argv[]){
 	}
 
 	printf("FIRST COME FIRST SERVE:\n");
-	runSchedule(USE_FCFS);
+	runSchedule(FCFS);
 	printf("\n\n\n");
 
 	printf("ROUND ROBIN:\n");
-	runSchedule(USE_RR);
+	runSchedule(RR);
 	printf("\n\n\n");
 
 	printf("UNIPROGRAMMING:\n");
-	runSchedule(USE_UNIPROGRAMMING);
+	runSchedule(UNIPROGRAMMING);
 	printf("\n\n\n");
 
 	printf("SHORTEST JOB FIRST:\n");
-	runSchedule(USE_SJF);
+	runSchedule(SJF);
 
 }

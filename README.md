@@ -25,7 +25,5 @@ Either provide the text-based input as the first and only command line argument,
 
 
 ####Upcoming fixes
-* At the beginning of the program, constants that should be defined as enums are being defined as integers.
 * Linked-list functions should be completely abstracted from the file.
-* Some lines are too long.
 * Not every function is properly commented.
